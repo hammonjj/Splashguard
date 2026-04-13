@@ -1,0 +1,15 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:VisualElement name="PauseScreen" class="screen pause-screen">
+        <ui:VisualElement name="PauseBackdrop" class="pause-backdrop" />
+        <ui:VisualElement name="PauseBackdropShade" class="pause-backdrop-shade" />
+        <ui:VisualElement name="PauseCard" class="screen-card pause-card">
+            <ui:Label text="PAUSED" class="screen-heading" />
+            <ui:Label text="Only the player who paused can drive this menu." class="screen-copy" />
+            <ui:VisualElement class="menu-button-list">
+                <ui:Button name="ResumeButton" text="RESUME" class="menu-button menu-button--primary" />
+                <ui:Button name="PauseSettingsButton" text="SETTINGS" class="menu-button" />
+                <ui:Button name="PauseQuitButton" text="QUIT TO MAIN MENU" class="menu-button menu-button--danger" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3da84b915c444e38ef193c2632c91ad, type: 3}
+  m_Name: GatlingBulletProjectile
+  m_EditorClassIdentifier: 
+  _projectilePrefab: {fileID: 700000000000000005, guid: 2bd0827a7f504d68bbeaf273703a72a8, type: 3}
+  _speed: 80
+  _lifetimeSeconds: 3
+  _collisionMask:
+    serializedVersion: 2
+    m_Bits: 383
+  _prewarmCount: 32
+  _maxPoolSize: 256

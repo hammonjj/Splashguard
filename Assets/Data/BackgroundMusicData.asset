@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b13659fac07014754808c51575a7ea77, type: 3}
+  m_Name: BackgroundMusicData
+  m_EditorClassIdentifier: Assembly-CSharp::BackgroundMusicData
+  titleMenuTracks:
+  - {fileID: 8300000, guid: 2bc72b1704fd34f898449e295ae56942, type: 3}
+  - {fileID: 8300000, guid: 9acef7f0a7237414a80798feac674236, type: 3}
+  - {fileID: 8300000, guid: 2e92007926d77459dbfc035e053cdec2, type: 3}
+  loadingScreenTracks: []
+  hubTracks:
+  - {fileID: 8300000, guid: e3ab1fcf03ed549cd8e7ac00f811b151, type: 3}
+  - {fileID: 8300000, guid: aa20dff2a8abe4e8a9463e5917f418fa, type: 3}

@@ -1,0 +1,16 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="PlayerHud.uss" />
+    <ui:VisualElement name="HudContainer" class="hud-root">
+        <ui:VisualElement name="HealthPanel" class="hud-panel health-panel">
+            <ui:Label name="HealthLabel" text="HEALTH" class="hud-caption" />
+            <ui:VisualElement name="HealthBarTrack" class="health-track">
+                <ui:VisualElement name="HealthBarFill" class="health-fill" />
+            </ui:VisualElement>
+            <ui:Label name="HealthValueLabel" text="-- / --" class="health-value" />
+        </ui:VisualElement>
+        <ui:VisualElement name="AmmoPanel" class="hud-panel ammo-panel">
+            <ui:Label name="ReloadLabel" text="RELOADING" class="reload-label" />
+            <ui:Label name="AmmoValueLabel" text="--" class="ammo-value" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

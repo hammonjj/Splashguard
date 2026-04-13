@@ -1,0 +1,111 @@
+:root {
+    --hud-margin: 24px;
+    --hud-panel-padding: 14px;
+    --hud-panel-radius: 12px;
+    --hud-panel-border: rgba(255, 255, 255, 0.08);
+    --hud-panel-background: rgba(7, 12, 18, 0.72);
+    --hud-caption-size: 12px;
+    --hud-value-size: 18px;
+    --hud-ammo-size: 36px;
+    --hud-health-width: 280px;
+    --hud-health-height: 18px;
+}
+
+.hud-root {
+    flex-grow: 1;
+}
+
+.hud-panel {
+    position: absolute;
+    padding-top: var(--hud-panel-padding);
+    padding-right: var(--hud-panel-padding);
+    padding-bottom: var(--hud-panel-padding);
+    padding-left: var(--hud-panel-padding);
+    border-top-left-radius: var(--hud-panel-radius);
+    border-top-right-radius: var(--hud-panel-radius);
+    border-bottom-right-radius: var(--hud-panel-radius);
+    border-bottom-left-radius: var(--hud-panel-radius);
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-top-color: var(--hud-panel-border);
+    border-right-color: var(--hud-panel-border);
+    border-bottom-color: var(--hud-panel-border);
+    border-left-color: var(--hud-panel-border);
+    background-color: var(--hud-panel-background);
+}
+
+.health-panel {
+    left: var(--hud-margin);
+    top: var(--hud-margin);
+    width: 320px;
+}
+
+.ammo-panel {
+    right: var(--hud-margin);
+    bottom: var(--hud-margin);
+    align-items: flex-end;
+}
+
+.hud-caption {
+    color: rgba(244, 247, 250, 0.68);
+    font-size: var(--hud-caption-size);
+    letter-spacing: 1px;
+    -unity-font-style: bold;
+}
+
+.health-track {
+    position: relative;
+    width: var(--hud-health-width);
+    height: var(--hud-health-height);
+    margin-top: 8px;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    border-bottom-left-radius: 3px;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    border-left-color: rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+}
+
+.health-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    border-top-left-radius: 1px;
+    border-top-right-radius: 1px;
+    border-bottom-right-radius: 1px;
+    border-bottom-left-radius: 1px;
+    background-color: rgb(92, 219, 130);
+}
+
+.health-value {
+    margin-top: 8px;
+    color: rgb(244, 247, 250);
+    font-size: var(--hud-value-size);
+    -unity-font-style: bold;
+}
+
+.reload-label {
+    margin-bottom: 4px;
+    color: rgb(255, 187, 92);
+    font-size: var(--hud-caption-size);
+    letter-spacing: 1px;
+    -unity-font-style: bold;
+}
+
+.ammo-value {
+    color: rgb(244, 247, 250);
+    font-size: var(--hud-ammo-size);
+    -unity-font-style: bold;
+}

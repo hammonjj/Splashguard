@@ -1,0 +1,10 @@
+OVDF v1.1
+Bitbox.ArenaGateController, Assembly-CSharp
+MetaGuid:fe3ac2ddd8f4e4fc9bde437693bd9c9f
+
+# "Gate Controls"
+Position: $root:1
+
+# OpenGates()
+* [Sirenix.OdinInspector.ButtonAttribute]
+	DirtyOnClick = True

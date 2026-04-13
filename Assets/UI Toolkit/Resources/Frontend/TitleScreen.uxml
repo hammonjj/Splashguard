@@ -1,0 +1,24 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:VisualElement name="TitleScreen" class="screen screen--title">
+        <ui:VisualElement class="title-layout">
+            <ui:VisualElement class="screen-card title-card title-main-card">
+                <ui:Label text="TOYMAGEDDON" class="screen-title" />
+                <ui:Label text="Start a run, open the shared settings shell, or quit." class="screen-subtitle" />
+                <ui:VisualElement class="menu-button-list">
+                    <ui:Button name="StartButton" text="Start" class="menu-button menu-button--primary" />
+                    <ui:Button name="TitleSettingsButton" text="Settings" class="menu-button" />
+                    <ui:Button name="QuitButton" text="Quit" class="menu-button menu-button--danger" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:VisualElement name="TitleLayoutSpacer" class="title-layout-spacer" />
+
+            <ui:VisualElement class="screen-card playtest-card">
+                <ui:Label text="EARLY PLAYTEST" class="playtest-heading" />
+                <ui:Label text="This build is still in active development. Systems, balance, controls, UI flow, and enemy behavior are all still being tuned." class="playtest-copy" />
+                <ui:Label text="Rough edges are expected. You may run into bugs, temporary visuals, missing polish, and features that change between sessions." class="playtest-copy" />
+                <ui:Label text="The goal of this build is to validate feel, clarity, readability, and fun before the game is locked down." class="playtest-copy playtest-copy--emphasis" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

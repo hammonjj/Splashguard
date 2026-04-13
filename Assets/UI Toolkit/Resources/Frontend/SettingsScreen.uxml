@@ -1,0 +1,103 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:VisualElement name="SettingsScreen" class="screen screen--overlay">
+        <ui:VisualElement class="screen-card settings-card">
+            <ui:VisualElement class="settings-header">
+                <ui:Label text="SETTINGS" class="screen-heading" />
+                <ui:Label text="Adjust core gameplay, language, and audio settings." class="screen-copy settings-copy" />
+            </ui:VisualElement>
+
+            <ui:VisualElement class="settings-tabs">
+                <ui:Button name="SettingsGeneralTabButton" text="General" class="menu-button settings-tab-button" />
+                <ui:Button name="SettingsGameplayTabButton" text="Gameplay" class="menu-button settings-tab-button" />
+                <ui:Button name="SettingsSoundTabButton" text="Sound" class="menu-button settings-tab-button" />
+            </ui:VisualElement>
+
+            <ui:VisualElement class="settings-content">
+                <ui:VisualElement name="SettingsGeneralPanel" class="settings-panel">
+                    <ui:VisualElement class="settings-row">
+                        <ui:VisualElement class="settings-row-labels">
+                            <ui:Label name="SettingsUiScaleTitleLabel" text="UI Scale" class="settings-row-title" />
+                            <ui:Label name="SettingsUiScaleDescriptionLabel" text="Resize menus, HUD, and character select for readability." class="settings-row-description" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="settings-control settings-slider-composite">
+                            <ui:Slider name="SettingsUiScaleSlider" low-value="80" high-value="140" value="100" class="settings-slider settings-slider--ui-scale" />
+                            <ui:Label name="SettingsUiScaleValueLabel" text="100%" class="settings-slider-value" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="settings-row">
+                        <ui:VisualElement class="settings-row-labels">
+                            <ui:Label text="Language" class="settings-row-title" />
+                            <ui:Label text="Choose the interface language used by the front-end UI." class="settings-row-description" />
+                        </ui:VisualElement>
+                        <ui:DropdownField name="SettingsLanguageDropdown" class="settings-control settings-dropdown" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="settings-row">
+                        <ui:VisualElement class="settings-row-labels">
+                            <ui:Label text="Send Feedback" class="settings-row-title" />
+                            <ui:Label text="Placeholder action for future player feedback flows." class="settings-row-description" />
+                        </ui:VisualElement>
+                        <ui:Button name="SettingsFeedbackButton" text="Feedback" class="menu-button settings-inline-action settings-inline-action--feedback" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="settings-row">
+                        <ui:VisualElement class="settings-row-labels">
+                            <ui:Label text="View Credits" class="settings-row-title" />
+                            <ui:Label text="Placeholder action for the credits screen entry point." class="settings-row-description" />
+                        </ui:VisualElement>
+                        <ui:Button name="SettingsCreditsButton" text="Credits" class="menu-button settings-inline-action settings-inline-action--credits" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement name="SettingsGameplayPanel" class="settings-panel">
+                    <ui:VisualElement class="settings-row">
+                        <ui:VisualElement class="settings-row-labels">
+                            <ui:Label text="Invert Vertical Aim" class="settings-row-title" />
+                            <ui:Label text="When enabled, pulling down aims the turret up." class="settings-row-description" />
+                        </ui:VisualElement>
+                        <ui:Toggle name="SettingsInvertVerticalAimToggle" text="" class="settings-control settings-toggle" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="settings-row">
+                        <ui:VisualElement class="settings-row-labels">
+                            <ui:Label text="Player Invincibility" class="settings-row-title" />
+                            <ui:Label text="Debug gameplay toggle for surviving incoming damage." class="settings-row-description" />
+                        </ui:VisualElement>
+                        <ui:Toggle name="SettingsPlayerInvincibilityToggle" text="" class="settings-control settings-toggle" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement name="SettingsSoundPanel" class="settings-panel">
+                    <ui:VisualElement class="settings-row">
+                        <ui:VisualElement class="settings-row-labels">
+                            <ui:Label text="Master Volume" class="settings-row-title" />
+                            <ui:Label text="Controls the overall mix for music and sound effects." class="settings-row-description" />
+                        </ui:VisualElement>
+                        <ui:Slider name="SettingsMasterVolumeSlider" low-value="0" high-value="100" value="80" class="settings-control settings-slider" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="settings-row">
+                        <ui:VisualElement class="settings-row-labels">
+                            <ui:Label text="Music Volume" class="settings-row-title" />
+                            <ui:Label text="Adjusts background music independently from the rest of the mix." class="settings-row-description" />
+                        </ui:VisualElement>
+                        <ui:Slider name="SettingsMusicVolumeSlider" low-value="0" high-value="100" value="80" class="settings-control settings-slider" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="settings-row">
+                        <ui:VisualElement class="settings-row-labels">
+                            <ui:Label text="SFX Volume" class="settings-row-title" />
+                            <ui:Label text="Controls engine, weapon, and gameplay sound effects." class="settings-row-description" />
+                        </ui:VisualElement>
+                        <ui:Slider name="SettingsSfxVolumeSlider" low-value="0" high-value="100" value="80" class="settings-control settings-slider" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:VisualElement class="settings-footer">
+                <ui:Button name="SettingsBackButton" text="BACK" class="menu-button menu-button--primary settings-back-button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

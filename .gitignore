@@ -1,0 +1,61 @@
+# Unity generated folders
+/[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Ll]ogs/
+[Bb]uild/
+[Bb]uilds/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+[Uu]ser[Ss]ettings/
+
+# Asset pipeline/cache artifacts
+Assets/AssetStoreTools*
+Assets/StreamingAssets/aa.meta
+Assets/StreamingAssets/aa/
+UIElementsSchema/
+
+# Generated IDE/project files
+*.csproj
+*.sln
+*.slnx
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.pdb.meta
+*.mdb.meta
+*.pidb.meta
+*.opendb
+*.VC.db
+
+# Unity autosave / crash files
+sysinfo.txt
+*.tmp
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln.docstates
+
+# Rider plugin
+Assets/Plugins/Editor/JetBrains*
+
+# Local machine/tooling config
+.mcp.json
+
+# Re-downloadable embedded package copies
+Packages/com.unity.visualeffectgraph/
+
+# Visual Studio Code local workspace state
+.history/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

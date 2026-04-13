@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4380f8f3c29b456683c0b4bd5a433903, type: 3}
+  m_Name: DefaultBoatGunData
+  m_EditorClassIdentifier: 
+  _mouseYawDegreesPerPixel: 0.1
+  _mousePitchDegreesPerPixel: 0.1
+  _gamepadYawDegreesPerSecond: 95
+  _gamepadPitchDegreesPerSecond: 70
+  _aimDeadZone: 0.08
+  _minPitch: -22
+  _maxPitch: 3
+  _defaultFieldOfView: 60
+  _zoomFieldOfView: 48
+  _zoomTransitionSpeed: 12
+  _zoomAimMultiplier: 0.75

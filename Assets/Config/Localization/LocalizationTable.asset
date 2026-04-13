@@ -1,0 +1,282 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7944970002c4c81b90d87a227cbaf81, type: 3}
+  m_Name: LocalizationTable
+  m_EditorClassIdentifier: Library::BitBox.Library.Localization.LocalizationTable
+  _languages:
+  - _id: en
+    _displayName: English
+    _nativeName: 
+  - _id: es
+    _displayName: Spanish
+    _nativeName: Espanol
+  _defaultLanguageId: en
+  _fallbackLanguageId: en
+  _entries:
+  - _key: ui.character_selection.control_type.arcade_style
+    _translations:
+    - _languageId: en
+      _text: ARCADE STYLE
+    - _languageId: es
+      _text: ESTILO ARCADE
+  - _key: ui.character_selection.control_type.full_control
+    _translations:
+    - _languageId: en
+      _text: FULL CONTROL
+    - _languageId: es
+      _text: CONTROL TOTAL
+  - _key: ui.character_selection.control_type.label
+    _translations:
+    - _languageId: en
+      _text: CONTROL TYPE
+    - _languageId: es
+      _text: TIPO DE CONTROL
+  - _key: ui.character_selection.control_type.tracks_only
+    _translations:
+    - _languageId: en
+      _text: TRACKS ONLY
+    - _languageId: es
+      _text: SOLO ORUGAS
+  - _key: ui.character_selection.weapon_type.flamethrower
+    _translations:
+    - _languageId: en
+      _text: FLAMETHROWER
+    - _languageId: es
+      _text: LANZALLAMAS
+  - _key: ui.character_selection.weapon_type.gattling_gun
+    _translations:
+    - _languageId: en
+      _text: GATTLING GUN
+    - _languageId: es
+      _text: AMETRALLADORA
+  - _key: ui.character_selection.weapon_type.label
+    _translations:
+    - _languageId: en
+      _text: WEAPON TYPE
+    - _languageId: es
+      _text: TIPO DE ARMA
+  - _key: ui.character_selection.info.device.controller
+    _translations:
+    - _languageId: en
+      _text: CONTROLLER
+    - _languageId: es
+      _text: CONTROL
+  - _key: ui.character_selection.info.device.gamepad
+    _translations:
+    - _languageId: en
+      _text: GAMEPAD
+    - _languageId: es
+      _text: MANDO
+  - _key: ui.character_selection.info.device.keyboard
+    _translations:
+    - _languageId: en
+      _text: KEYBOARD
+    - _languageId: es
+      _text: TECLADO
+  - _key: ui.character_selection.info.diagram.ai
+    _translations:
+    - _languageId: en
+      _text: AI
+    - _languageId: es
+      _text: IA
+  - _key: ui.character_selection.info.diagram.aim
+    _translations:
+    - _languageId: en
+      _text: AIM
+    - _languageId: es
+      _text: APUNTA
+  - _key: ui.character_selection.info.diagram.drive
+    _translations:
+    - _languageId: en
+      _text: DRIVE
+    - _languageId: es
+      _text: CONDUCE
+  - _key: ui.character_selection.info.diagram.fire
+    _translations:
+    - _languageId: en
+      _text: FIRE
+    - _languageId: es
+      _text: DISPARA
+  - _key: ui.character_selection.info.diagram.gunner
+    _translations:
+    - _languageId: en
+      _text: GUNNER
+    - _languageId: es
+      _text: ARTILLERO
+  - _key: ui.character_selection.info.diagram.left_tread
+    _translations:
+    - _languageId: en
+      _text: LEFT TREAD
+    - _languageId: es
+      _text: ORUGA IZQ
+  - _key: ui.character_selection.info.diagram.right_tread
+    _translations:
+    - _languageId: en
+      _text: RIGHT TREAD
+    - _languageId: es
+      _text: ORUGA DER
+  - _key: ui.character_selection.info.arcade_style.gamepad.line1
+    _translations:
+    - _languageId: en
+      _text: Drive with Left Stick using arcade steering.
+    - _languageId: es
+      _text: Conduce con Left Stick con giro arcade.
+  - _key: ui.character_selection.info.arcade_style.gamepad.line2
+    _translations:
+    - _languageId: en
+      _text: Aim with Right Stick. Fire with RT.
+    - _languageId: es
+      _text: Apunta con Right Stick. Dispara con RT.
+  - _key: ui.character_selection.info.arcade_style.keyboard.line1
+    _translations:
+    - _languageId: en
+      _text: Drive with W/S + A/D using arcade steering.
+    - _languageId: es
+      _text: Conduce con W/S + A/D con giro arcade.
+  - _key: ui.character_selection.info.arcade_style.keyboard.line2
+    _translations:
+    - _languageId: en
+      _text: Aim with arrows. Fire with Space.
+    - _languageId: es
+      _text: Apunta con flechas. Dispara con Espacio.
+  - _key: ui.character_selection.info.full_control.gamepad.ai
+    _translations:
+    - _languageId: en
+      _text: After a short pause, AI takes over. Aim or fire to take it back.
+    - _languageId: es
+      _text: Tras una pausa corta, la IA toma la torreta. Apunta o dispara para recuperarla.
+  - _key: ui.character_selection.info.full_control.gamepad.line1
+    _translations:
+    - _languageId: en
+      _text: Drive with Left Stick.
+    - _languageId: es
+      _text: Conduce con Left Stick.
+  - _key: ui.character_selection.info.full_control.gamepad.line2
+    _translations:
+    - _languageId: en
+      _text: Aim with Right Stick. Fire with RT.
+    - _languageId: es
+      _text: Apunta con Right Stick. Dispara con RT.
+  - _key: ui.character_selection.info.full_control.keyboard.ai
+    _translations:
+    - _languageId: en
+      _text: After a short pause, AI takes over. Aim or fire to take it back.
+    - _languageId: es
+      _text: Tras una pausa corta, la IA toma la torreta. Apunta o dispara para recuperarla.
+  - _key: ui.character_selection.info.full_control.keyboard.line1
+    _translations:
+    - _languageId: en
+      _text: Drive with W/S + A/D.
+    - _languageId: es
+      _text: Conduce con W/S + A/D.
+  - _key: ui.character_selection.info.full_control.keyboard.line2
+    _translations:
+    - _languageId: en
+      _text: Aim with arrows. Fire with Space.
+    - _languageId: es
+      _text: Apunta con flechas. Dispara con Espacio.
+  - _key: ui.character_selection.info.heading
+    _translations:
+    - _languageId: en
+      _text: CURRENT SETUP
+    - _languageId: es
+      _text: CONFIGURACION
+  - _key: ui.character_selection.info.tracks_only.gamepad.line1
+    _translations:
+    - _languageId: en
+      _text: One stick per tread.
+    - _languageId: es
+      _text: Un stick por oruga.
+  - _key: ui.character_selection.info.tracks_only.gamepad.line2
+    _translations:
+    - _languageId: en
+      _text: AI gunner is always active.
+    - _languageId: es
+      _text: El artillero IA siempre esta activo.
+  - _key: ui.character_selection.info.tracks_only.keyboard.line1
+    _translations:
+    - _languageId: en
+      _text: Run each tread yourself.
+    - _languageId: es
+      _text: Maneja cada oruga por separado.
+  - _key: ui.character_selection.info.tracks_only.keyboard.line2
+    _translations:
+    - _languageId: en
+      _text: AI gunner is always active.
+    - _languageId: es
+      _text: El artillero IA siempre esta activo.
+  - _key: ui.character_selection.ready_button.default
+    _translations:
+    - _languageId: en
+      _text: READY
+    - _languageId: es
+      _text: LISTO
+  - _key: ui.character_selection.ready_button.ready
+    _translations:
+    - _languageId: en
+      _text: LOCKED IN
+    - _languageId: es
+      _text: CONFIRMADO
+  - _key: ui.character_selection.subtitle.default
+    _translations:
+    - _languageId: en
+      _text: Choose your control type and weapon type, then ready up.
+    - _languageId: es
+      _text: Elige tu control y arma, y confirma.
+  - _key: ui.character_selection.subtitle.ready
+    _translations:
+    - _languageId: en
+      _text: Waiting for other players...
+    - _languageId: es
+      _text: Esperando a los demas...
+  - _key: ui.character_selection.title.default
+    _translations:
+    - _languageId: en
+      _text: READY UP
+    - _languageId: es
+      _text: PREPARATE
+  - _key: ui.character_selection.title.ready
+    _translations:
+    - _languageId: en
+      _text: PLAYER READY
+    - _languageId: es
+      _text: JUGADOR LISTO
+  - _key: ui.quit
+    _translations:
+    - _languageId: en
+      _text: Quit
+    - _languageId: es
+      _text: Salir
+  - _key: ui.settings
+    _translations:
+    - _languageId: en
+      _text: Settings
+    - _languageId: es
+      _text: Ajustes
+  - _key: ui.settings.general.ui_scale.description
+    _translations:
+    - _languageId: en
+      _text: Resize menus, HUD, and character select for readability.
+    - _languageId: es
+      _text: Ajusta el tamano de menus, HUD y seleccion de personaje.
+  - _key: ui.settings.general.ui_scale.title
+    _translations:
+    - _languageId: en
+      _text: UI Scale
+    - _languageId: es
+      _text: Escala UI
+  - _key: ui.start
+    _translations:
+    - _languageId: en
+      _text: Start
+    - _languageId: es
+      _text: Iniciar

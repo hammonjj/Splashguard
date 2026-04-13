@@ -1,0 +1,60 @@
+# Default normalization for text files.
+* text=auto
+
+# Unity YAML assets should stay diffable unless explicitly overridden below.
+*.[Uu][Nn][Ii][Tt][Yy] text eol=lf
+*.[Pp][Rr][Ee][Ff][Aa][Bb] text eol=lf
+*.[Aa][Ss][Ss][Ee][Tt] text eol=lf
+*.[Mm][Aa][Tt] text eol=lf
+*.[Aa][Nn][Ii][Mm] text eol=lf
+*.[Cc][Oo][Nn][Tt][Rr][Oo][Ll][Ll][Ee][Rr] text eol=lf
+*.[Mm][Ee][Tt][Aa] text eol=lf
+*.[Ss][Hh][Aa][Dd][Ee][Rr][Gg][Rr][Aa][Pp][Hh] text eol=lf
+*.[Vv][Ff][Xx] text eol=lf
+
+# Unity can serialize baked lighting payloads as binary .asset files.
+**/[Ll][Ii][Gg][Hh][Tt][Ii][Nn][Gg][Dd][Aa][Tt][Aa].asset filter=lfs diff=lfs merge=lfs -text -eol
+
+# Binary Unity assets and distributable artifacts.
+*.[Pp][Nn][Gg] filter=lfs diff=lfs merge=lfs -text
+*.[Jj][Pp][Gg] filter=lfs diff=lfs merge=lfs -text
+*.[Jj][Pp][Ee][Gg] filter=lfs diff=lfs merge=lfs -text
+*.[Tt][Gg][Aa] filter=lfs diff=lfs merge=lfs -text
+*.[Pp][Ss][Dd] filter=lfs diff=lfs merge=lfs -text
+*.[Pp][Ss][Bb] filter=lfs diff=lfs merge=lfs -text
+*.[Tt][Ii][Ff] filter=lfs diff=lfs merge=lfs -text
+*.[Tt][Ii][Ff][Ff] filter=lfs diff=lfs merge=lfs -text
+*.[Ee][Xx][Rr] filter=lfs diff=lfs merge=lfs -text
+*.[Hh][Dd][Rr] filter=lfs diff=lfs merge=lfs -text
+*.[Dd][Dd][Ss] filter=lfs diff=lfs merge=lfs -text
+*.[Ww][Aa][Vv] filter=lfs diff=lfs merge=lfs -text
+*.[Mm][Pp]3 filter=lfs diff=lfs merge=lfs -text
+*.[Oo][Gg][Gg] filter=lfs diff=lfs merge=lfs -text
+*.[Aa][Ii][Ff][Ff] filter=lfs diff=lfs merge=lfs -text
+*.[Ff][Ll][Aa][Cc] filter=lfs diff=lfs merge=lfs -text
+*.[Mm]4[Aa] filter=lfs diff=lfs merge=lfs -text
+*.[Mm][Pp]4 filter=lfs diff=lfs merge=lfs -text
+*.[Mm][Oo][Vv] filter=lfs diff=lfs merge=lfs -text
+*.[Ww][Ee][Bb][Mm] filter=lfs diff=lfs merge=lfs -text
+*.[Ff][Bb][Xx] filter=lfs diff=lfs merge=lfs -text
+*.[Bb][Ll][Ee][Nn][Dd] filter=lfs diff=lfs merge=lfs -text
+*.[Oo][Bb][Jj] filter=lfs diff=lfs merge=lfs -text
+*.[Dd][Aa][Ee] filter=lfs diff=lfs merge=lfs -text
+*.[3][Dd][Ss] filter=lfs diff=lfs merge=lfs -text
+*.[Ll][Xx][Oo] filter=lfs diff=lfs merge=lfs -text
+*.[Tt][Tt][Ff] filter=lfs diff=lfs merge=lfs -text
+*.[Oo][Tt][Ff] filter=lfs diff=lfs merge=lfs -text
+*.[Dd][Ll][Ll] filter=lfs diff=lfs merge=lfs -text
+*.[Dd][Yy][Ll][Ii][Bb] filter=lfs diff=lfs merge=lfs -text
+*.[Ss][Oo] filter=lfs diff=lfs merge=lfs -text
+*.[Aa][Aa][Rr] filter=lfs diff=lfs merge=lfs -text
+*.[Jj][Aa][Rr] filter=lfs diff=lfs merge=lfs -text
+*.[Zz][Ii][Pp] filter=lfs diff=lfs merge=lfs -text
+*.[Uu][Nn][Ii][Tt][Yy][Pp][Aa][Cc][Kk][Aa][Gg][Ee] filter=lfs diff=lfs merge=lfs -text
+*.[Bb][Yy][Tt][Ee][Ss] filter=lfs diff=lfs merge=lfs -text
+*.[Dd][Aa][Tt][Aa] filter=lfs diff=lfs merge=lfs -text
+*.[Hh][Aa][Pp][Tt][Ii][Cc] filter=lfs diff=lfs merge=lfs -text
+**/*.[Ff][Rr][Aa][Mm][Ee][Ww][Oo][Rr][Kk]/** filter=lfs diff=lfs merge=lfs -text
+
+# This scene currently contains very large inline serialized data.
+Assets/Scenes/Sandbox.unity filter=lfs diff=lfs merge=lfs -text -eol

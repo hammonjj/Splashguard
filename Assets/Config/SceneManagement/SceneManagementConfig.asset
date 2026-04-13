@@ -1,0 +1,96 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67fb5f9f6af14c398d54ee6891ff6ff0, type: 3}
+  m_Name: SceneManagementConfig
+  m_EditorClassIdentifier: Assembly-CSharp::BitBox.Toymageddon.SceneManagement.SceneManagementConfig
+  serializationData:
+    SerializedFormat: 2
+    SerializedBytes: 
+    ReferencedUnityObjects: []
+    SerializedBytesString: 
+    Prefab: {fileID: 0}
+    PrefabModificationsReferencedUnityObjects: []
+    PrefabModifications: []
+    SerializationNodes: []
+  _bootstrapScene:
+    _sceneGuid: 2c95e766c424e4001a48244caa6cba0b
+    _scenePath: Assets/Scenes/Bootstrap.unity
+    _displayName: Bootstrap
+  _globalBaseScenes: []
+  _globalUnmanagedScenes:
+  - _sceneGuid: 2c95e766c424e4001a48244caa6cba0b
+    _scenePath: Assets/Scenes/Bootstrap.unity
+    _displayName: Bootstrap
+  _logicalScenes:
+  - _sceneType: 1
+    _displayName: Title Menu
+    _description: Loads the title menu scene.
+    _showInDebugTools: 1
+    _requiredScenes:
+    - _sceneGuid: d26880e1f20b346c9bf553d53e2bac34
+      _scenePath: Assets/Scenes/TitleMenu.unity
+      _displayName: TitleMenu
+    _preserveIfLoadedScenes: []
+    _unloadOnExitRules: []
+  - _sceneType: 2
+    _displayName: Character Selection
+    _description: Loads the shared player scene for join and ready-up.
+    _showInDebugTools: 1
+    _requiredScenes:
+    - _sceneGuid: 05365755ff1e94bf59324e67050cdfa4
+      _scenePath: Assets/Scenes/Players.unity
+      _displayName: Players
+    _preserveIfLoadedScenes: []
+    _unloadOnExitRules: []
+  - _sceneType: 3
+    _displayName: Hub World
+    _description: Loads the empty hub shell with shared systems and players.
+    _showInDebugTools: 1
+    _requiredScenes:
+    - _sceneGuid: 743f2c4052cdc447981db7abb0074724
+      _scenePath: Assets/Scenes/Systems.unity
+      _displayName: Systems
+    - _sceneGuid: 05365755ff1e94bf59324e67050cdfa4
+      _scenePath: Assets/Scenes/Players.unity
+      _displayName: Players
+    - _sceneGuid: 7cf397e47189344c29b872d712515fb8
+      _scenePath: Assets/Scenes/HubWorld.unity
+      _displayName: HubWorld
+    _preserveIfLoadedScenes: []
+    _unloadOnExitRules: []
+  - _sceneType: 4
+    _displayName: Sandbox
+    _description: Loads the shared systems, players, and sandbox scenes.
+    _showInDebugTools: 1
+    _requiredScenes:
+    - _sceneGuid: 743f2c4052cdc447981db7abb0074724
+      _scenePath: Assets/Scenes/Systems.unity
+      _displayName: Systems
+    - _sceneGuid: 05365755ff1e94bf59324e67050cdfa4
+      _scenePath: Assets/Scenes/Players.unity
+      _displayName: Players
+    - _sceneGuid: a5ccc6ae7526d43f8bab4d302d1e7a3d
+      _scenePath: Assets/Scenes/Sandbox.unity
+      _displayName: Sandbox
+    _preserveIfLoadedScenes: []
+    _unloadOnExitRules: []
+  _startupBindings:
+  - _id: startup.bootstrap
+    _displayName: Title Menu
+    _startUpMode: 0
+    _targetScene: 1
+    _showInDebugTools: 1
+  - _id: startup.hubworld
+    _displayName: Hub World
+    _startUpMode: 1
+    _targetScene: 3
+    _showInDebugTools: 1

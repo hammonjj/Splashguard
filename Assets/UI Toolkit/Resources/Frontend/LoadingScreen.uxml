@@ -1,0 +1,10 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:VisualElement name="LoadingScreen" class="screen screen--overlay">
+        <ui:VisualElement class="screen-card loading-card">
+            <ui:Label text="LOADING" class="screen-heading" />
+            <ui:Label name="LoadingStatusLabel" text="Loading..." class="loading-status" />
+            <ui:ProgressBar name="LoadingProgressBar" title="" low-value="0" high-value="100" value="0" class="loading-progress" />
+            <ui:Label name="LoadingPercentLabel" text="0%" class="loading-percent" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

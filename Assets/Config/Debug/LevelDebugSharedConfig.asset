@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0ad4431025944c0cb78d38a2c3d5b55, type: 3}
+  m_Name: LevelDebugSharedConfig
+  m_EditorClassIdentifier: Assembly-CSharp::LevelDebugSharedConfig
+  _sceneShortcuts:
+  - _id: scene.bootstrap
+    _displayName: Bootstrap
+    _scenePath: Assets/Scenes/Bootstrap.unity
+    _showOnDashboard: 1
+  - _id: scene.title_menu
+    _displayName: TitleMenu
+    _scenePath: Assets/Scenes/TitleMenu.unity
+    _showOnDashboard: 1
+  - _id: scene.players
+    _displayName: Players
+    _scenePath: Assets/Scenes/Players.unity
+    _showOnDashboard: 1
+  - _id: scene.systems
+    _displayName: Systems
+    _scenePath: Assets/Scenes/Systems.unity
+    _showOnDashboard: 1
+  - _id: scene.hub_world
+    _displayName: HubWorld
+    _scenePath: Assets/Scenes/HubWorld.unity
+    _showOnDashboard: 1
+  _startupModes:
+  - _id: startup.bootstrap
+    _displayName: Title Menu
+    _startUpMode: 0
+    _showOnDashboard: 1
+  - _id: startup.hub_world
+    _displayName: HubWorld
+    _startUpMode: 1
+    _showOnDashboard: 1
+  _arenas: []
+  _runtimeCommands: []
+  _prefabCategories: []
+  _scriptTemplates:
+    _sourceTemplateFolderName: ScriptTemplates
+    _sourceMonoBehaviourTemplateFileName: 1-Scripting__MonoBehaviour Script-NewMonoBehaviourScript.cs.txt
