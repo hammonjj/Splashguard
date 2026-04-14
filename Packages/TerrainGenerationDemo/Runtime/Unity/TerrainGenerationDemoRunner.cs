@@ -1,3 +1,4 @@
+using System;
 using BitBox.TerrainGeneration.Core;
 using UnityEngine;
 
@@ -9,12 +10,19 @@ namespace BitBox.TerrainGeneration.Unity
     {
         [SerializeField] private TerrainGeneratorPreset _preset;
         [SerializeField] private Material _terrainMaterial;
+        [SerializeField] private TerrainPropLibrary _propLibrary;
+        [SerializeField] private bool _generateProps = true;
         [SerializeField] private bool _generateOnEnable = true;
         [SerializeField] private bool _updateMeshCollider;
+        [SerializeField, Range(0, 8), Tooltip("Fallback zone color smoothing pass count used when no preset is assigned.")]
+        private int _zoneColorSmoothingPasses = 2;
         [SerializeField] private string _generatedObjectName = "Generated Island Terrain";
 
         public Heightfield LastHeightfield { get; private set; }
+        public TerrainZoneMap LastZoneMap { get; private set; }
         public MeshArrays LastMeshArrays { get; private set; }
+        public LayeredTerrainMeshes LastLayeredMeshes { get; private set; }
+        public TerrainPropPlacement[] LastPropPlacements { get; private set; } = Array.Empty<TerrainPropPlacement>();
 
         public TerrainGeneratorPreset Preset
         {
@@ -26,23 +34,53 @@ namespace BitBox.TerrainGeneration.Unity
         {
             TerrainGenerationRequest request = GetCurrentRequest();
             LastHeightfield = TerrainGenerator.GenerateHeightfield(request);
-            LastMeshArrays = TerrainMeshBuilder.Build(
+            TerrainZoneSettings zoneSettings = _preset != null
+                ? _preset.ToZoneSettings()
+                : TerrainZoneSettings.Default;
+            LastZoneMap = TerrainZoneClassifier.GenerateZoneMap(
                 LastHeightfield,
+                zoneSettings,
+                request.WorldSizeX,
+                request.WorldSizeZ);
+
+            int smoothingPasses = _preset != null
+                ? _preset.ZoneColorSmoothingPasses
+                : _zoneColorSmoothingPasses;
+            LastLayeredMeshes = LayeredTerrainMeshBuilder.Build(
+                LastHeightfield,
+                LastZoneMap,
                 request.WorldSizeX,
                 request.WorldSizeZ,
-                includeClassificationColors: true);
+                TerrainZoneColorPalette.Default,
+                smoothingPasses);
+            LastMeshArrays = LastLayeredMeshes.Land;
 
             GameObject generatedObject = ResolveGeneratedObject();
-            var meshFilter = generatedObject.GetComponent<MeshFilter>();
-            var meshCollider = generatedObject.GetComponent<MeshCollider>();
+            GameObject landObject = ResolveLayerObject(generatedObject.transform, "Real Terrain", includeCollider: true);
+            GameObject shallowWaterObject = ResolveLayerObject(generatedObject.transform, "Shallow Water", includeCollider: false);
+            GameObject deepWaterObject = ResolveLayerObject(generatedObject.transform, "Deep Water", includeCollider: false);
             bool updateCollider = _preset != null ? _preset.UpdateMeshCollider : _updateMeshCollider;
-            UnityMeshApplier.ApplyTo(meshFilter, meshCollider, LastMeshArrays, updateCollider);
 
-            var meshRenderer = generatedObject.GetComponent<MeshRenderer>();
-            if (meshRenderer.sharedMaterial == null || _terrainMaterial != null)
-            {
-                meshRenderer.sharedMaterial = _terrainMaterial != null ? _terrainMaterial : CreateFallbackMaterial();
-            }
+            UnityMeshApplier.ApplyTo(
+                landObject.GetComponent<MeshFilter>(),
+                landObject.GetComponent<MeshCollider>(),
+                LastLayeredMeshes.Land,
+                updateCollider);
+            UnityMeshApplier.ApplyTo(
+                shallowWaterObject.GetComponent<MeshFilter>(),
+                null,
+                LastLayeredMeshes.ShallowWater,
+                updateCollider: false);
+            UnityMeshApplier.ApplyTo(
+                deepWaterObject.GetComponent<MeshFilter>(),
+                null,
+                LastLayeredMeshes.DeepWater,
+                updateCollider: false);
+
+            AssignLayerMaterial(landObject);
+            AssignLayerMaterial(shallowWaterObject);
+            AssignLayerMaterial(deepWaterObject);
+            RegenerateProps(generatedObject, request);
 
             return generatedObject;
         }
@@ -91,22 +129,161 @@ namespace BitBox.TerrainGeneration.Unity
                 generatedObject.transform.SetParent(transform, worldPositionStays: false);
             }
 
-            if (generatedObject.GetComponent<MeshFilter>() == null)
-            {
-                generatedObject.AddComponent<MeshFilter>();
-            }
-
-            if (generatedObject.GetComponent<MeshRenderer>() == null)
-            {
-                generatedObject.AddComponent<MeshRenderer>();
-            }
-
-            if (generatedObject.GetComponent<MeshCollider>() == null)
-            {
-                generatedObject.AddComponent<MeshCollider>();
-            }
+            RemoveContainerMeshComponents(generatedObject);
 
             return generatedObject;
+        }
+
+        private static GameObject ResolveLayerObject(Transform parent, string objectName, bool includeCollider)
+        {
+            Transform existing = parent.Find(objectName);
+            GameObject layerObject;
+            if (existing != null)
+            {
+                layerObject = existing.gameObject;
+            }
+            else
+            {
+                layerObject = new GameObject(objectName);
+                layerObject.transform.SetParent(parent, worldPositionStays: false);
+            }
+
+            if (layerObject.GetComponent<MeshFilter>() == null)
+            {
+                layerObject.AddComponent<MeshFilter>();
+            }
+
+            if (layerObject.GetComponent<MeshRenderer>() == null)
+            {
+                layerObject.AddComponent<MeshRenderer>();
+            }
+
+            MeshCollider meshCollider = layerObject.GetComponent<MeshCollider>();
+            if (includeCollider)
+            {
+                if (meshCollider == null)
+                {
+                    layerObject.AddComponent<MeshCollider>();
+                }
+            }
+            else if (meshCollider != null)
+            {
+                DestroyUnityObject(meshCollider);
+            }
+
+            return layerObject;
+        }
+
+        private void AssignLayerMaterial(GameObject layerObject)
+        {
+            var meshRenderer = layerObject.GetComponent<MeshRenderer>();
+            if (meshRenderer.sharedMaterial == null || _terrainMaterial != null)
+            {
+                meshRenderer.sharedMaterial = _terrainMaterial != null ? _terrainMaterial : CreateFallbackMaterial();
+            }
+        }
+
+        private static void RemoveContainerMeshComponents(GameObject generatedObject)
+        {
+            MeshCollider meshCollider = generatedObject.GetComponent<MeshCollider>();
+            if (meshCollider != null)
+            {
+                DestroyUnityObject(meshCollider);
+            }
+
+            MeshRenderer meshRenderer = generatedObject.GetComponent<MeshRenderer>();
+            if (meshRenderer != null)
+            {
+                DestroyUnityObject(meshRenderer);
+            }
+
+            MeshFilter meshFilter = generatedObject.GetComponent<MeshFilter>();
+            if (meshFilter != null)
+            {
+                DestroyUnityObject(meshFilter);
+            }
+        }
+
+        private void RegenerateProps(GameObject generatedObject, TerrainGenerationRequest request)
+        {
+            Transform propsRoot = ResolvePropsRoot(generatedObject.transform);
+            ClearChildren(propsRoot);
+
+            bool shouldGenerateProps = _preset != null ? _preset.GenerateProps : _generateProps;
+            TerrainPropLibrary library = _preset != null && _preset.PropLibrary != null ? _preset.PropLibrary : _propLibrary;
+            if (!shouldGenerateProps || library == null || LastZoneMap == null)
+            {
+                LastPropPlacements = Array.Empty<TerrainPropPlacement>();
+                return;
+            }
+
+            TerrainPropPlacementSettings propSettings = _preset != null
+                ? _preset.ToPropPlacementSettings()
+                : TerrainPropPlacementSettings.Default;
+            LastPropPlacements = TerrainPropPlacer.GeneratePlacements(
+                LastHeightfield,
+                LastZoneMap,
+                request,
+                propSettings);
+
+            for (int i = 0; i < LastPropPlacements.Length; i++)
+            {
+                TerrainPropPlacement placement = LastPropPlacements[i];
+                if (!library.TryGetPrefab(placement.Type, out GameObject prefab))
+                {
+                    continue;
+                }
+
+                GameObject prop = Instantiate(prefab, propsRoot);
+                prop.name = $"{placement.Type} {i + 1:000}";
+                prop.transform.localPosition = placement.Position;
+                prop.transform.localRotation = Quaternion.Euler(0f, placement.YawDegrees, 0f);
+                prop.transform.localScale = Vector3.one * placement.Scale;
+
+                TerrainPlaceholderProp placeholder = prop.GetComponent<TerrainPlaceholderProp>();
+                if (placeholder != null)
+                {
+                    placeholder.EnsureVisuals();
+                }
+            }
+        }
+
+        private static Transform ResolvePropsRoot(Transform generatedObjectTransform)
+        {
+            Transform existing = generatedObjectTransform.Find("Props");
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var propsRoot = new GameObject("Props");
+            propsRoot.transform.SetParent(generatedObjectTransform, worldPositionStays: false);
+            return propsRoot.transform;
+        }
+
+        private static void ClearChildren(Transform root)
+        {
+            for (int i = root.childCount - 1; i >= 0; i--)
+            {
+                DestroyUnityObject(root.GetChild(i).gameObject);
+            }
+        }
+
+        private static void DestroyUnityObject(UnityEngine.Object target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(target);
+            }
+            else
+            {
+                DestroyImmediate(target);
+            }
         }
 
         private static Material CreateFallbackMaterial()

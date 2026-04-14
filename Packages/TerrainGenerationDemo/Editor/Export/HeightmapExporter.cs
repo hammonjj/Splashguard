@@ -11,6 +11,11 @@ namespace BitBox.TerrainGeneration.Editor.Export
         public static Texture2D SavePng(Heightfield heightfield, string assetPath)
         {
             Texture2D texture = TexturePreviewBuilder.BuildHeightPreview(heightfield);
+            return SavePng(texture, assetPath);
+        }
+
+        public static Texture2D SavePng(Texture2D texture, string assetPath)
+        {
             byte[] bytes = texture.EncodeToPNG();
             File.WriteAllBytes(assetPath, bytes);
             AssetDatabase.ImportAsset(assetPath);

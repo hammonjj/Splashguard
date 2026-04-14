@@ -31,13 +31,21 @@ namespace BitBox.TerrainGeneration.Tests.Editor
                 serializedPreset.FindProperty("_seed").intValue = 9001;
                 serializedPreset.FindProperty("_resolutionX").intValue = 17;
                 serializedPreset.FindProperty("_resolutionZ").intValue = 19;
+                serializedPreset.FindProperty("_beachHeightBand").floatValue = 1.75f;
+                serializedPreset.FindProperty("_zoneColorSmoothingPasses").intValue = 4;
+                serializedPreset.FindProperty("_treeDensity").floatValue = 11f;
                 serializedPreset.ApplyModifiedPropertiesWithoutUndo();
 
                 TerrainGenerationRequest request = preset.ToRequest();
+                TerrainZoneSettings zoneSettings = preset.ToZoneSettings();
+                TerrainPropPlacementSettings propSettings = preset.ToPropPlacementSettings();
 
                 Assert.AreEqual(9001, request.Seed);
                 Assert.AreEqual(17, request.ResolutionX);
                 Assert.AreEqual(19, request.ResolutionZ);
+                Assert.AreEqual(1.75f, zoneSettings.BeachHeightBand);
+                Assert.AreEqual(4, preset.ZoneColorSmoothingPasses);
+                Assert.AreEqual(11f, propSettings.TreeDensity);
             }
             finally
             {

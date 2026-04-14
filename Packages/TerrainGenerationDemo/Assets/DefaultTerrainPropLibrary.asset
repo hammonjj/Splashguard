@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71f9d8e9c3274a7e9ed1d65f06675a11, type: 3}
+  m_Name: DefaultTerrainPropLibrary
+  m_EditorClassIdentifier: 
+  _prefabs:
+  - Type: 0
+    Prefab: {fileID: 100000, guid: f10c2632cd2a4e1ea9d9458b3bd11001, type: 3}
+  - Type: 1
+    Prefab: {fileID: 100000, guid: f10c2632cd2a4e1ea9d9458b3bd11002, type: 3}
+  - Type: 2
+    Prefab: {fileID: 100000, guid: f10c2632cd2a4e1ea9d9458b3bd11003, type: 3}
+  - Type: 3
+    Prefab: {fileID: 100000, guid: f10c2632cd2a4e1ea9d9458b3bd11004, type: 3}

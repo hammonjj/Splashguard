@@ -34,6 +34,30 @@ namespace BitBox.TerrainGeneration.Unity
             return texture;
         }
 
+        public static Texture2D BuildZonePreview(TerrainZoneMap zoneMap, TerrainZoneColorPalette palette)
+        {
+            return BuildZonePreview(zoneMap, palette, smoothingPasses: 0);
+        }
+
+        public static Texture2D BuildZonePreview(
+            TerrainZoneMap zoneMap,
+            TerrainZoneColorPalette palette,
+            int smoothingPasses)
+        {
+            var texture = new Texture2D(zoneMap.Width, zoneMap.Depth, TextureFormat.RGBA32, mipChain: false)
+            {
+                name = "Terrain Zone Preview",
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp
+            };
+
+            Color[] pixels = TerrainZoneMeshColorizer.BuildSmoothedColors(zoneMap, palette, smoothingPasses);
+
+            texture.SetPixels(pixels);
+            texture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+            return texture;
+        }
+
         private static Color BuildPixel(float height, float seaLevel, float minHeight, float maxHeight)
         {
             if (SeaLevelClassifier.IsWater(height, seaLevel))

@@ -31,4 +31,24 @@ MonoBehaviour:
   _islandRadius: 0.42
   _minIslandSeparation: 0.22
   _blendMode: 2
+  _shallowWaterDepth: 2.2
+  _beachHeightBand: 1.2
+  _rockSlopeThreshold: 0.42
+  _mountainElevationThreshold: 0.72
+  _zoneColorSmoothingPasses: 2
+  _generateProps: 1
+  _propLibrary: {fileID: 11400000, guid: f10c2632cd2a4e1ea9d9458b3bd12001, type: 2}
+  _treeDensity: 9
+  _rockDensity: 10
+  _grassPatchDensity: 20
+  _driftwoodDensity: 3
+  _treeMaxSlope: 0.32
+  _grassPatchMaxSlope: 0.38
+  _driftwoodMaxSlope: 0.2
+  _treeMinSpacing: 4.5
+  _rockMinSpacing: 3.5
+  _grassPatchMinSpacing: 2.25
+  _driftwoodMinSpacing: 5
+  _propMinScale: 0.75
+  _propMaxScale: 1.35
   _updateMeshCollider: 0

@@ -39,6 +39,39 @@ namespace BitBox.TerrainGeneration.Tests.Editor
         }
 
         [Test]
+        public void BuildLayeredMeshes_SplitsLandShallowAndDeepTriangles()
+        {
+            var heightfield = new Heightfield(3, 3, new float[9], seaLevel: 0f);
+            var zoneMap = new TerrainZoneMap(
+                3,
+                3,
+                new[]
+                {
+                    TerrainZone.DeepWater, TerrainZone.DeepWater, TerrainZone.ShallowWater,
+                    TerrainZone.DeepWater, TerrainZone.ShallowWater, TerrainZone.Beach,
+                    TerrainZone.Grassland, TerrainZone.Grassland, TerrainZone.Mountain
+                });
+
+            LayeredTerrainMeshes meshes = LayeredTerrainMeshBuilder.Build(
+                heightfield,
+                zoneMap,
+                worldSizeX: 2f,
+                worldSizeZ: 2f,
+                TerrainZoneColorPalette.Default,
+                smoothingPasses: 1);
+
+            Assert.Greater(meshes.Land.Triangles.Length, 0);
+            Assert.Greater(meshes.ShallowWater.Triangles.Length, 0);
+            Assert.Greater(meshes.DeepWater.Triangles.Length, 0);
+            Assert.AreEqual(9, meshes.Land.Vertices.Length);
+            Assert.AreEqual(9, meshes.ShallowWater.Vertices.Length);
+            Assert.AreEqual(9, meshes.DeepWater.Vertices.Length);
+            Assert.AreEqual(
+                (3 - 1) * (3 - 1) * 6,
+                meshes.Land.Triangles.Length + meshes.ShallowWater.Triangles.Length + meshes.DeepWater.Triangles.Length);
+        }
+
+        [Test]
         public void DemoRunner_Regenerate_ReusesSingleGeneratedChild()
         {
             var root = new GameObject("Terrain Runner Test");
@@ -58,9 +91,22 @@ namespace BitBox.TerrainGeneration.Tests.Editor
                 }
 
                 Assert.AreEqual(1, generatedChildCount);
-                var meshFilter = root.transform.GetChild(0).GetComponent<MeshFilter>();
-                Assert.IsNotNull(meshFilter);
-                Assert.IsNotNull(meshFilter.sharedMesh);
+                Transform generatedTerrain = root.transform.GetChild(0);
+                Assert.IsNull(generatedTerrain.GetComponent<MeshFilter>());
+
+                Transform land = generatedTerrain.Find("Real Terrain");
+                Transform shallowWater = generatedTerrain.Find("Shallow Water");
+                Transform deepWater = generatedTerrain.Find("Deep Water");
+                Assert.IsNotNull(land);
+                Assert.IsNotNull(shallowWater);
+                Assert.IsNotNull(deepWater);
+                Assert.IsNotNull(land.GetComponent<MeshFilter>().sharedMesh);
+                Assert.IsNotNull(shallowWater.GetComponent<MeshFilter>().sharedMesh);
+                Assert.IsNotNull(deepWater.GetComponent<MeshFilter>().sharedMesh);
+                Assert.IsNotNull(land.GetComponent<MeshCollider>());
+                Assert.IsNull(shallowWater.GetComponent<MeshCollider>());
+                Assert.IsNull(deepWater.GetComponent<MeshCollider>());
+                Assert.IsNotNull(generatedTerrain.Find("Props"));
             }
             finally
             {
