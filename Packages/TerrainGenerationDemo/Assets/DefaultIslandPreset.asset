@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0df63ea83be348958a0eab42b3bd2b19, type: 3}
+  m_Name: DefaultIslandPreset
+  m_EditorClassIdentifier: 
+  _seed: 965839563
+  _resolutionX: 129
+  _resolutionZ: 129
+  _worldSizeX: 96
+  _worldSizeZ: 96
+  _heightScale: 14
+  _seaLevel: 0
+  _noiseScale: 22
+  _octaves: 8
+  _persistence: 0.5
+  _lacunarity: 2
+  _noiseMode: 0
+  _maskMode: 3
+  _falloffStrength: 9
+  _falloffExponent: 1.8
+  _islandCount: 1
+  _islandRadius: 0.42
+  _minIslandSeparation: 0.22
+  _blendMode: 2
+  _updateMeshCollider: 0
