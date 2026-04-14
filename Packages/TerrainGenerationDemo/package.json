@@ -1,0 +1,14 @@
+{
+  "name": "com.bitbox.terraingenerationdemo",
+  "displayName": "TerrainGenerationDemo",
+  "version": "0.1.0",
+  "unity": "6000.3",
+  "description": "Reusable procedural island terrain generation demo package.",
+  "keywords": [
+    "terrain",
+    "procedural",
+    "island",
+    "demo"
+  ],
+  "category": "Tools"
+}

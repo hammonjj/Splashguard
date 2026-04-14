@@ -1,0 +1,23 @@
+{
+    "name": "BitBox.TerrainGeneration.Tests.Editor",
+    "rootNamespace": "BitBox.TerrainGeneration.Tests.Editor",
+    "references": [
+        "BitBox.TerrainGeneration.Core",
+        "BitBox.TerrainGeneration.Unity",
+        "BitBox.TerrainGeneration.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "noEngineReferences": false
+}

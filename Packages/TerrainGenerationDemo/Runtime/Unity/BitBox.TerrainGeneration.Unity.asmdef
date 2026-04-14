@@ -1,0 +1,16 @@
+{
+    "name": "BitBox.TerrainGeneration.Unity",
+    "rootNamespace": "BitBox.TerrainGeneration.Unity",
+    "references": [
+        "BitBox.TerrainGeneration.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
