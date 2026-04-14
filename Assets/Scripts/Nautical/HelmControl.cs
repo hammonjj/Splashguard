@@ -13,6 +13,7 @@ namespace Bitbox
     [DisallowMultipleComponent]
     public class HelmControl : MonoBehaviourBase
     {
+        private const string HelmInteractionTriggerName = "HelmControl";
         private const string TerrainLayerName = "Terrain";
         private static readonly Dictionary<int, HelmControl> ActiveHelmsByPlayerIndex = new();
 
@@ -23,6 +24,8 @@ namespace Bitbox
         [SerializeField] private CameraTargetAnchors _cameraAnchors;
 
         private readonly Dictionary<PlayerInput, int> _overlappingPlayers = new();
+        private readonly List<ColliderState> _controlledPlayerColliderStates = new();
+        private readonly List<PlayerInput> _staleOverlappingPlayers = new();
 
         private Rigidbody _rigidbody;
         private Transform _boatTransform;
@@ -35,6 +38,7 @@ namespace Bitbox
         private Quaternion _controlledPlayerLocalRotation;
         private float _throttleSetting;
         private float _steeringInput;
+        private bool _suppressExitUntilActionReleased;
         private bool _isPaused;
         private int _terrainLayerMask;
 
@@ -78,6 +82,7 @@ namespace Bitbox
             if (_controllingPlayerInput == null)
             {
                 _steeringInput = 0f;
+                RefreshInteractionState();
                 TryHandleHelmTakeoverRequest();
                 return;
             }
@@ -88,6 +93,8 @@ namespace Bitbox
 
         protected override void OnFixedUpdated()
         {
+            SyncControlledPlayerPose();
+
             if (_rigidbody == null || _isPaused)
             {
                 return;
@@ -95,11 +102,22 @@ namespace Bitbox
 
             ApplyThrottleForce();
             ApplySteeringTorque();
+            SyncControlledPlayerPose();
+        }
+
+        protected override void OnLateUpdated()
+        {
+            SyncControlledPlayerPose();
         }
 
         protected override void OnTriggerEntered(Collider other)
         {
             if (!TryResolvePlayerInput(other, out PlayerInput playerInput))
+            {
+                return;
+            }
+
+            if (!IsPlayerOverlappingInteractionTrigger(playerInput))
             {
                 return;
             }
@@ -118,25 +136,27 @@ namespace Bitbox
         protected override void OnTriggerExited(Collider other)
         {
             if (!TryResolvePlayerInput(other, out PlayerInput playerInput)
-                || !_overlappingPlayers.TryGetValue(playerInput, out int overlapCount))
+                || !_overlappingPlayers.ContainsKey(playerInput))
             {
                 return;
             }
 
-            if (overlapCount > 1)
+            if (IsPlayerOverlappingInteractionTrigger(playerInput))
             {
-                _overlappingPlayers[playerInput] = overlapCount - 1;
                 return;
             }
 
             _overlappingPlayers.Remove(playerInput);
-            LogInfo(
-                $"Player left helm range. helm={name}, player={DescribePlayer(playerInput)}, overlappingPlayers={_overlappingPlayers.Count}.");
 
             if (playerInput == _controllingPlayerInput)
             {
-                ReleaseControl(reason: "left_range");
+                LogInfo(
+                    $"Controlling player left helm trigger while pose-locked. helm={name}, player={DescribePlayer(playerInput)}. Keeping helm control active.");
+                return;
             }
+
+            LogInfo(
+                $"Player left helm range. helm={name}, player={DescribePlayer(playerInput)}, overlappingPlayers={_overlappingPlayers.Count}.");
         }
 
         protected override void OnDrawnGizmos()
@@ -219,7 +239,10 @@ namespace Bitbox
 
             _controllingPlayerInput = playerInput;
             CaptureControlledPlayerPose(playerInput.transform);
+            _suppressExitUntilActionReleased = true;
+            DisableControlledPlayerColliders(playerInput.transform);
             ActiveHelmsByPlayerIndex[playerInput.playerIndex] = this;
+            SyncControlledPlayerPose();
             LogInfo(
                 $"Player took helm. helm={name}, player={DescribePlayer(playerInput)}, throttle={_throttleSetting:0.00}.");
             _globalMessageBus.Publish(new PlayerEnteredHelmEvent(playerInput.playerIndex));
@@ -230,7 +253,9 @@ namespace Bitbox
             foreach (var overlappingEntry in _overlappingPlayers)
             {
                 PlayerInput playerInput = overlappingEntry.Key;
-                if (playerInput == null || !CanPlayerTakeHelm(playerInput))
+                if (playerInput == null
+                    || !IsPlayerOverlappingInteractionTrigger(playerInput)
+                    || !CanPlayerTakeHelm(playerInput))
                 {
                     continue;
                 }
@@ -252,6 +277,8 @@ namespace Bitbox
             if (_controllingPlayerInput == null)
             {
                 _steeringInput = 0f;
+                _suppressExitUntilActionReleased = false;
+                RestoreControlledPlayerColliders();
                 return;
             }
 
@@ -272,6 +299,9 @@ namespace Bitbox
             _actionAction = null;
             _killThrottleAction = null;
             _steeringInput = 0f;
+            _suppressExitUntilActionReleased = false;
+            SyncControlledPlayerPose(releasedPlayerInput.transform);
+            RestoreControlledPlayerColliders();
 
             if (publishEvent)
             {
@@ -289,7 +319,11 @@ namespace Bitbox
                 _throttleSetting = 0f;
             }
 
-            if (_actionAction.WasPressedThisFrame())
+            if (_suppressExitUntilActionReleased)
+            {
+                _suppressExitUntilActionReleased = _actionAction.IsPressed();
+            }
+            else if (_actionAction.WasPressedThisFrame())
             {
                 ReleaseControl(reason: "action_exit");
                 return;
@@ -308,7 +342,7 @@ namespace Bitbox
 
         private void ApplyThrottleForce()
         {
-            if (!WaterSurface.TryFindSurface(_rigidbody.worldCenterOfMass, out _, out _))
+            if (!WaterQuery.TrySample(_rigidbody.worldCenterOfMass, out _))
             {
                 return;
             }
@@ -382,7 +416,7 @@ namespace Bitbox
                 return false;
             }
 
-            if (!WaterSurface.TryFindSurface(probePoint, out _, out WaterSample waterSample))
+            if (!WaterQuery.TrySample(probePoint, out WaterSample waterSample))
             {
                 return true;
             }
@@ -412,10 +446,101 @@ namespace Bitbox
                 return;
             }
 
-            Transform playerTransform = _controllingPlayerInput.transform;
+            SyncControlledPlayerPose(_controllingPlayerInput.transform);
+        }
+
+        private void SyncControlledPlayerPose(Transform playerTransform)
+        {
+            if (playerTransform == null || _boatTransform == null)
+            {
+                return;
+            }
+
             playerTransform.SetPositionAndRotation(
                 _boatTransform.TransformPoint(_controlledPlayerLocalPosition),
                 _boatTransform.rotation * _controlledPlayerLocalRotation);
+        }
+
+        private void DisableControlledPlayerColliders(Transform playerRoot)
+        {
+            RestoreControlledPlayerColliders();
+
+            if (playerRoot == null)
+            {
+                return;
+            }
+
+            Collider[] playerColliders = playerRoot.GetComponentsInChildren<Collider>(includeInactive: true);
+            for (int i = 0; i < playerColliders.Length; i++)
+            {
+                Collider playerCollider = playerColliders[i];
+                if (playerCollider == null)
+                {
+                    continue;
+                }
+
+                _controlledPlayerColliderStates.Add(new ColliderState(playerCollider, playerCollider.enabled));
+                playerCollider.enabled = false;
+            }
+        }
+
+        private void RestoreControlledPlayerColliders()
+        {
+            for (int i = 0; i < _controlledPlayerColliderStates.Count; i++)
+            {
+                ColliderState colliderState = _controlledPlayerColliderStates[i];
+                if (colliderState.Collider != null)
+                {
+                    colliderState.Collider.enabled = colliderState.WasEnabled;
+                }
+            }
+
+            _controlledPlayerColliderStates.Clear();
+        }
+
+        private void RefreshInteractionState()
+        {
+            if (_interactionTrigger == null)
+            {
+                return;
+            }
+
+            _staleOverlappingPlayers.Clear();
+            foreach (var overlappingEntry in _overlappingPlayers)
+            {
+                PlayerInput playerInput = overlappingEntry.Key;
+                if (playerInput == null || !IsPlayerOverlappingInteractionTrigger(playerInput))
+                {
+                    _staleOverlappingPlayers.Add(playerInput);
+                }
+            }
+
+            for (int i = 0; i < _staleOverlappingPlayers.Count; i++)
+            {
+                _overlappingPlayers.Remove(_staleOverlappingPlayers[i]);
+            }
+        }
+
+        private bool IsPlayerOverlappingInteractionTrigger(PlayerInput playerInput)
+        {
+            if (playerInput == null || _interactionTrigger == null)
+            {
+                return false;
+            }
+
+            Collider[] playerColliders = playerInput.GetComponentsInChildren<Collider>(includeInactive: true);
+            for (int i = 0; i < playerColliders.Length; i++)
+            {
+                Collider playerCollider = playerColliders[i];
+                if (playerCollider != null
+                    && playerCollider.enabled
+                    && playerCollider.bounds.Intersects(_interactionTrigger.bounds))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool TryResolvePlayerInput(Collider other, out PlayerInput playerInput)
@@ -427,7 +552,9 @@ namespace Bitbox
         private static bool CanPlayerTakeHelm(PlayerInput playerInput)
         {
             return playerInput.currentActionMap != null
-                && playerInput.currentActionMap.name == Strings.ThirdPersonControls;
+                && playerInput.currentActionMap.name == Strings.ThirdPersonControls
+                && !AnchorControls.IsPlayerInAnchorControlRange(playerInput)
+                && !DeckMountedGunControl.TryGetActiveGun(playerInput.playerIndex, out _);
         }
 
         private static bool WasTakeHelmPressedThisFrame(PlayerInput playerInput)
@@ -454,6 +581,20 @@ namespace Bitbox
                 return _interactionTrigger;
             }
 
+            Transform helmTriggerTransform = FindChildByName(transform, HelmInteractionTriggerName);
+            if (helmTriggerTransform != null)
+            {
+                Collider[] namedTriggerCandidates = helmTriggerTransform.GetComponentsInChildren<Collider>(includeInactive: true);
+                for (int i = 0; i < namedTriggerCandidates.Length; i++)
+                {
+                    Collider candidateCollider = namedTriggerCandidates[i];
+                    if (candidateCollider != null && candidateCollider.isTrigger)
+                    {
+                        return candidateCollider;
+                    }
+                }
+            }
+
             Collider[] candidateColliders = GetComponentsInChildren<Collider>(includeInactive: true);
             for (int i = 0; i < candidateColliders.Length; i++)
             {
@@ -465,6 +606,43 @@ namespace Bitbox
             }
 
             return null;
+        }
+
+        private static Transform FindChildByName(Transform root, string childName)
+        {
+            if (root == null)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < root.childCount; i++)
+            {
+                Transform child = root.GetChild(i);
+                if (child.name == childName)
+                {
+                    return child;
+                }
+
+                Transform nestedChild = FindChildByName(child, childName);
+                if (nestedChild != null)
+                {
+                    return nestedChild;
+                }
+            }
+
+            return null;
+        }
+
+        private readonly struct ColliderState
+        {
+            public ColliderState(Collider collider, bool wasEnabled)
+            {
+                Collider = collider;
+                WasEnabled = wasEnabled;
+            }
+
+            public Collider Collider { get; }
+            public bool WasEnabled { get; }
         }
     }
 }

@@ -156,7 +156,7 @@ namespace Bitbox
 
         private static bool TryGetWaterSample(Vector3 worldPoint, out WaterSample waterSample)
         {
-            if (WaterSurface.TryFindSurface(worldPoint, out _, out waterSample))
+            if (WaterQuery.TrySample(worldPoint, out waterSample))
             {
                 return true;
             }
