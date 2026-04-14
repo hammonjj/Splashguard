@@ -105,6 +105,11 @@ namespace Bitbox
                 return;
             }
 
+            if (!IsPlayerOverlappingInteractionTrigger(playerInput))
+            {
+                return;
+            }
+
             if (IsBlockedFromRetake(playerInput))
             {
                 return;
@@ -124,9 +129,9 @@ namespace Bitbox
         protected override void OnTriggerExited(Collider other)
         {
             if (!TryResolvePlayerInput(other, out PlayerInput playerInput)
-                || !_overlappingPlayers.TryGetValue(playerInput, out int overlapCount))
+                || !_overlappingPlayers.ContainsKey(playerInput))
             {
-                if (playerInput != null)
+                if (playerInput != null && !IsPlayerOverlappingInteractionTrigger(playerInput))
                 {
                     _playersBlockedFromRetakeUntilExit.Remove(playerInput.playerIndex);
                 }
@@ -134,9 +139,8 @@ namespace Bitbox
                 return;
             }
 
-            if (overlapCount > 1)
+            if (IsPlayerOverlappingInteractionTrigger(playerInput))
             {
-                _overlappingPlayers[playerInput] = overlapCount - 1;
                 return;
             }
 
@@ -148,6 +152,7 @@ namespace Bitbox
 
         private void CacheReferences()
         {
+            ConfigureMountedRigidbody();
             _boatTransform ??= ResolveBoatTransform();
             _localMessageBus ??= GetComponent<MessageBus>();
             if (_localMessageBus == null)
@@ -181,6 +186,8 @@ namespace Bitbox
             _rotationPivotInitialLocalRotation = _rotationPivot.localRotation;
             _pitchPivotInitialLocalRotation = _pitchPivot.localRotation;
             AttachSeatAndCameraAnchorsToPitchPivot();
+            AttachPhysicalCollidersToPitchPivot();
+            IgnorePhysicalColliderContactsWithBoat();
             _yawDegrees = 0f;
             _pitchDegrees = Mathf.Clamp(
                 NormalizeAngle(_pitchPivot.localEulerAngles.x),
@@ -191,13 +198,34 @@ namespace Bitbox
 
         private Transform ResolveBoatTransform()
         {
-            Rigidbody parentRigidbody = GetComponentInParent<Rigidbody>();
-            if (parentRigidbody != null)
+            Rigidbody[] parentRigidbodies = GetComponentsInParent<Rigidbody>(includeInactive: true);
+            for (int i = 0; i < parentRigidbodies.Length; i++)
             {
-                return parentRigidbody.transform;
+                Rigidbody parentRigidbody = parentRigidbodies[i];
+                if (parentRigidbody != null && parentRigidbody.transform != transform)
+                {
+                    return parentRigidbody.transform;
+                }
+            }
+
+            if (parentRigidbodies.Length > 0 && parentRigidbodies[0] != null)
+            {
+                return parentRigidbodies[0].transform;
             }
 
             return transform.root != null ? transform.root : transform;
+        }
+
+        private void ConfigureMountedRigidbody()
+        {
+            Rigidbody mountedRigidbody = GetComponent<Rigidbody>();
+            if (mountedRigidbody == null)
+            {
+                return;
+            }
+
+            mountedRigidbody.useGravity = false;
+            mountedRigidbody.isKinematic = true;
         }
 
         private void OnPauseGame(PauseGameEvent @event)
@@ -214,7 +242,10 @@ namespace Bitbox
             foreach (var overlappingEntry in _overlappingPlayers)
             {
                 PlayerInput playerInput = overlappingEntry.Key;
-                if (playerInput == null || IsBlockedFromRetake(playerInput) || !CanPlayerTakeGun(playerInput))
+                if (playerInput == null
+                    || !IsPlayerOverlappingInteractionTrigger(playerInput)
+                    || IsBlockedFromRetake(playerInput)
+                    || !CanPlayerTakeGun(playerInput))
                 {
                     continue;
                 }
@@ -406,6 +437,61 @@ namespace Bitbox
             }
         }
 
+        private void AttachPhysicalCollidersToPitchPivot()
+        {
+            if (_pitchPivot == null)
+            {
+                return;
+            }
+
+            Collider[] colliders = GetComponentsInChildren<Collider>(includeInactive: true);
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                Collider gunCollider = colliders[i];
+                if (gunCollider == null
+                    || gunCollider == _interactionTrigger
+                    || gunCollider.isTrigger
+                    || gunCollider.transform == transform
+                    || gunCollider.transform.IsChildOf(_pitchPivot))
+                {
+                    continue;
+                }
+
+                gunCollider.transform.SetParent(_pitchPivot, true);
+            }
+        }
+
+        private void IgnorePhysicalColliderContactsWithBoat()
+        {
+            if (_boatTransform == null || _boatTransform == transform)
+            {
+                return;
+            }
+
+            Collider[] gunColliders = GetComponentsInChildren<Collider>(includeInactive: true);
+            Collider[] boatColliders = _boatTransform.GetComponentsInChildren<Collider>(includeInactive: true);
+
+            for (int gunIndex = 0; gunIndex < gunColliders.Length; gunIndex++)
+            {
+                Collider gunCollider = gunColliders[gunIndex];
+                if (!IsPhysicalGunCollider(gunCollider))
+                {
+                    continue;
+                }
+
+                for (int boatIndex = 0; boatIndex < boatColliders.Length; boatIndex++)
+                {
+                    Collider boatCollider = boatColliders[boatIndex];
+                    if (!IsPhysicalBoatCollider(boatCollider))
+                    {
+                        continue;
+                    }
+
+                    Physics.IgnoreCollision(gunCollider, boatCollider, true);
+                }
+            }
+        }
+
         private void SyncControlledPlayerPose()
         {
             if (_controllingPlayerInput == null || _seatAnchor == null)
@@ -545,7 +631,9 @@ namespace Bitbox
         private static bool CanPlayerTakeGun(PlayerInput playerInput)
         {
             return playerInput.currentActionMap != null
-                && playerInput.currentActionMap.name == Strings.ThirdPersonControls;
+                && playerInput.currentActionMap.name == Strings.ThirdPersonControls
+                && !AnchorControls.IsPlayerInAnchorControlRange(playerInput)
+                && !HelmControl.TryGetActiveHelm(playerInput.playerIndex, out _);
         }
 
         private static bool WasTakeGunPressedThisFrame(PlayerInput playerInput)
@@ -589,6 +677,21 @@ namespace Bitbox
             }
 
             return ResolveTriggerFrom(GetComponentsInChildren<Collider>(includeInactive: true));
+        }
+
+        private bool IsPhysicalGunCollider(Collider candidateCollider)
+        {
+            return candidateCollider != null
+                && candidateCollider != _interactionTrigger
+                && !candidateCollider.isTrigger
+                && candidateCollider.transform.IsChildOf(transform);
+        }
+
+        private bool IsPhysicalBoatCollider(Collider candidateCollider)
+        {
+            return candidateCollider != null
+                && !candidateCollider.isTrigger
+                && !candidateCollider.transform.IsChildOf(transform);
         }
 
         private static Transform FindChildByName(Transform root, string childName)
