@@ -23,6 +23,8 @@ namespace StormBreakers
         [Space(10)]
         [Tooltip("The albedo color of the water. In deep clear water it must be very dark blue as the light ray penetrate deeply into the water and scatter few light. In shallow water the color can be brigther with more yellow coming from the sand color. In dirty water the color can be bright too as the light ray scatter quickly when penettrating the water.  ")]
         public Color waterColor = new Color(0.068f, 0.150f, 0.217f);
+        [Tooltip("World Y height of the still water surface used by buoyancy and water sampling.")]
+        public float waterLevel = 0f;
         [Tooltip("The terrrain  used to compute the shore effects")]
         public Terrain terrain;
 
@@ -297,6 +299,7 @@ namespace StormBreakers
             // ----------- statics ----------------
             #region
             Ocean.waterColor = waterColor;
+            Ocean.waterLevel = waterLevel;
 
             Ocean.wavelength[0] = wavelength0;
             Ocean.wavelength[1] = wavelength1;

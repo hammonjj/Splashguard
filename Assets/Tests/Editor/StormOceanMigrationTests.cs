@@ -88,6 +88,7 @@ namespace BitBox.Toymageddon.Tests.Editor
             var oceanController = stormOcean.GetComponent<OceanController>();
 
             NUnitAssert.IsNotNull(oceanController, "Expected StormOcean to own the active OceanController.");
+            NUnitAssert.AreEqual(0f, oceanController.waterLevel, 0.001f);
             NUnitAssert.AreEqual(50f, oceanController.fixedFrameRate, 0.001f);
             NUnitAssert.IsNull(oceanController.terrain, "Terrain should remain unset until shoreline integration is in scope.");
             NUnitAssert.IsNotNull(stormOcean.GetComponent<StormOceanWaterSampler>());
@@ -147,6 +148,7 @@ namespace BitBox.Toymageddon.Tests.Editor
             NUnitAssert.AreEqual(new Vector3(0.1f, 2f, 0.5f), serializedWaterInteraction.FindProperty("dragCoefficients").vector3Value);
             NUnitAssert.AreEqual(new Vector3(2f, 1f, 1.2f), serializedWaterInteraction.FindProperty("inertiaFactors").vector3Value);
             NUnitAssert.AreEqual(new Vector3(0f, -0.5f, 0f), serializedWaterInteraction.FindProperty("gravityCenterShift").vector3Value);
+            NUnitAssert.AreEqual(new Vector3(0f, -0.45f, 0f), serializedWaterInteraction.FindProperty("buoyancyMeshLocalOffset").vector3Value);
 
             string prefabText = File.ReadAllText(PlayerVesselPrefabPath);
             NUnitAssert.IsFalse(

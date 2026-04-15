@@ -38,6 +38,8 @@ namespace StormBreakers
         public Vector3 gravityCenterShift = Vector3.zero;
         [Tooltip("Optional mesh collider used as the simulated hull when this component is not on the same GameObject as the hull collider.")]
         [SerializeField] private MeshCollider simulationMeshCollider;
+        [Tooltip("Local-space offset applied only to the simulated buoyancy hull. Negative Y raises the visible boat waterline without moving the render or collision geometry.")]
+        public Vector3 buoyancyMeshLocalOffset = Vector3.zero;
 
         // internal physic data
         private Mesh simulatedMesh; // the mesh used to compute the force, audio and particles
@@ -304,9 +306,9 @@ namespace StormBreakers
             for (int t = 0; t<numberOfTriangles; t++)
             {
                 // getting each vertex of the triangle
-                Vector3 vertex1 = GetSimulationVertexInInteractionSpace(vertices[triangles[3*t]]);
-                Vector3 vertex2 = GetSimulationVertexInInteractionSpace(vertices[triangles[3*t + 1]]);
-                Vector3 vertex3 = GetSimulationVertexInInteractionSpace(vertices[triangles[3*t + 2]]);
+                Vector3 vertex1 = GetSimulationVertexInInteractionSpace(vertices[triangles[3*t]]) + buoyancyMeshLocalOffset;
+                Vector3 vertex2 = GetSimulationVertexInInteractionSpace(vertices[triangles[3*t + 1]]) + buoyancyMeshLocalOffset;
+                Vector3 vertex3 = GetSimulationVertexInInteractionSpace(vertices[triangles[3*t + 2]]) + buoyancyMeshLocalOffset;
 
                 // scaling the vertex with the transform scale for the computation of the area and size
                 Vector3 scaledVertex1 = Vector3.Scale(transform.localScale, vertex1);

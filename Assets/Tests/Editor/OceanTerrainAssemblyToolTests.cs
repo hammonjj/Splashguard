@@ -182,6 +182,14 @@ namespace BitBox.Toymageddon.Tests.Editor
 
             AssertAllVerticesHaveHeight(result.ShallowOceanMesh, waterSurfaceHeight);
             AssertAllVerticesHaveHeight(result.DeepOceanMesh, waterSurfaceHeight);
+
+            var oceanController = result.Root
+                .transform
+                .Find(OceanTerrainAssemblyUtility.OceanSystemChildName)
+                ?.GetComponent<OceanController>();
+
+            NUnitAssert.IsNotNull(oceanController);
+            NUnitAssert.AreEqual(waterSurfaceHeight, oceanController.waterLevel, 0.001f);
         }
 
         [Test]

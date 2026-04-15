@@ -32,6 +32,7 @@ namespace StormBreakers
 
         // wave inputs
         public static Color waterColor;
+        public static float waterLevel;
         public static float[] wavelength;
         public static float[] direction;
         public static float[] intensity;
@@ -362,8 +363,8 @@ namespace StormBreakers
                 deformation = OceanDeformation(time, previousUndeformedPosition, out _, groundDepth);
             }
 
-            // the height is then the y component of the deformation hapening at the new undeformed position
-            return deformation.y;
+            // the height is the configured still-water level plus the y component of the wave deformation.
+            return waterLevel + deformation.y;
         }
 
         /// <summary>

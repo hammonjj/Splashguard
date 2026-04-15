@@ -20,3 +20,12 @@ MonoBehaviour:
   _jumpRiseGravityMultiplier: 0.5
   _jumpFallGravityMultiplier: 0.5
   _groundedVerticalVelocity: -2
+  _waterFloatEnabled: 1
+  _waterMoveSpeedMultiplier: 0.45
+  _waterEnterDepth: 0.05
+  _waterExitHeight: 0.18
+  _waterSurfaceRootOffset: -0.05
+  _waterFloatCorrectionSharpness: 10
+  _waterFloatRiseSpeed: 3
+  _waterFloatSinkSpeed: 1
+  _waterJumpHeightMultiplier: 0.6

@@ -74,6 +74,7 @@ namespace Bitbox.Toymageddon.Nautical
                 ? Ocean.GetNormal(Time.time, undeformedPosition, deformation, groundDepth, _normalPrecision)
                 : Vector3.up;
             Vector3 surfacePoint = undeformedPosition + deformation;
+            surfacePoint.y = height;
             sample = new WaterSample(surfacePoint, normal, height);
             return true;
         }

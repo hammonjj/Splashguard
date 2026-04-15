@@ -435,7 +435,11 @@ namespace Bitbox.Toymageddon.Nautical.Editor
                 forceWaterLayer: true);
             GameObject gradientObject = CreateGradientChild(root.transform, shallowSource);
             MeshRenderer[] blendRenderers = CreateBlendBandChildren(gradientObject.transform, shallowSource, blendBands);
-            GameObject oceanSystem = CreateOceanSystem(root.transform, request.StormOceanPrefab, oceanTemplateMaterial);
+            GameObject oceanSystem = CreateOceanSystem(
+                root.transform,
+                request.StormOceanPrefab,
+                oceanTemplateMaterial,
+                request.WaterSurfaceHeight);
 
             var sync = root.AddComponent<StormOceanLayerMaterialSync>();
             sync.Configure(
@@ -885,7 +889,11 @@ namespace Bitbox.Toymageddon.Nautical.Editor
             return colors;
         }
 
-        private static GameObject CreateOceanSystem(Transform parent, GameObject stormOceanPrefab, Material oceanTemplateMaterial)
+        private static GameObject CreateOceanSystem(
+            Transform parent,
+            GameObject stormOceanPrefab,
+            Material oceanTemplateMaterial,
+            float waterSurfaceHeight)
         {
             var oceanSystem = PrefabUtility.InstantiatePrefab(stormOceanPrefab, parent) as GameObject;
             if (oceanSystem == null)
@@ -912,6 +920,7 @@ namespace Bitbox.Toymageddon.Nautical.Editor
                 oceanController.waterColor = oceanTemplateMaterial.HasProperty(WaterColorPropertyName)
                     ? oceanTemplateMaterial.GetColor(WaterColorPropertyName)
                     : oceanController.waterColor;
+                oceanController.waterLevel = parent.TransformPoint(new Vector3(0f, waterSurfaceHeight, 0f)).y;
                 oceanController.UpdateWaves();
                 oceanController.UpdateWind();
                 oceanController.UpdateLighting();

@@ -4,6 +4,7 @@ using BitBox.Library.Constants.Enums;
 using BitBox.Library.Eventing;
 using BitBox.Library.Eventing.GlobalEvents;
 using BitBox.Library.Eventing.PlayerEvents;
+using Bitbox.Toymageddon.Nautical;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -40,6 +41,8 @@ namespace Bitbox
         private float _lastGroundedTime = float.NegativeInfinity;
         private Transform _activeSupportTransform;
         private Vector3 _activeSupportLocalPoint;
+        private bool _isFloatingInWater;
+        private object _scriptedMovementOwner;
 
         protected override void OnAwakened()
         {
@@ -75,6 +78,8 @@ namespace Bitbox
         {
             _verticalVelocity = 0f;
             _lastGroundedTime = float.NegativeInfinity;
+            _isFloatingInWater = false;
+            _scriptedMovementOwner = null;
             ClearActiveSupport();
             PublishGroundedIdleAnimation("disabled");
             _globalMessageBus.Unsubscribe<MacroSceneLoadedEvent>(OnMacroSceneLoaded);
@@ -85,7 +90,18 @@ namespace Bitbox
         {
             if (!_currentMacroScene.IsGameplayScene() || _isPaused)
             {
+                _isFloatingInWater = false;
                 ClearActiveSupport();
+                return;
+            }
+
+            if (_scriptedMovementOwner != null)
+            {
+                _verticalVelocity = 0f;
+                _lastGroundedTime = Time.time;
+                _isFloatingInWater = false;
+                ClearActiveSupport();
+                PublishGroundedIdleAnimation("scripted_movement");
                 return;
             }
 
@@ -93,12 +109,87 @@ namespace Bitbox
             {
                 _verticalVelocity = 0f;
                 _lastGroundedTime = Time.time;
+                _isFloatingInWater = false;
                 ClearActiveSupport();
                 PublishGroundedIdleAnimation("movement_suspended");
                 return;
             }
 
             PublishAnimationSnapshot(UpdateMovement(), "frame_update");
+        }
+
+        public bool TryBeginScriptedMovement(object owner)
+        {
+            if (owner == null)
+            {
+                return false;
+            }
+
+            if (_scriptedMovementOwner != null && !ReferenceEquals(_scriptedMovementOwner, owner))
+            {
+                return false;
+            }
+
+            _scriptedMovementOwner = owner;
+            _verticalVelocity = 0f;
+            _lastGroundedTime = Time.time;
+            _isFloatingInWater = false;
+            ClearActiveSupport();
+            PublishGroundedIdleAnimation("scripted_movement_started");
+            return true;
+        }
+
+        public void EndScriptedMovement(object owner)
+        {
+            if (owner == null || !ReferenceEquals(_scriptedMovementOwner, owner))
+            {
+                return;
+            }
+
+            _scriptedMovementOwner = null;
+            _verticalVelocity = 0f;
+            _lastGroundedTime = Time.time;
+            _isFloatingInWater = false;
+            ClearActiveSupport();
+            PublishGroundedIdleAnimation("scripted_movement_ended");
+        }
+
+        public bool IsScriptedMovementOwnedBy(object owner)
+        {
+            return owner != null && ReferenceEquals(_scriptedMovementOwner, owner);
+        }
+
+        public bool TryApplyScriptedMovementPose(
+            object owner,
+            Vector3 worldPosition,
+            Quaternion worldRotation,
+            float locomotionNormalized)
+        {
+            if (!IsScriptedMovementOwnedBy(owner))
+            {
+                return false;
+            }
+
+            bool controllerWasEnabled = _characterController != null && _characterController.enabled;
+            if (controllerWasEnabled)
+            {
+                _characterController.enabled = false;
+            }
+
+            transform.SetPositionAndRotation(worldPosition, worldRotation);
+
+            if (VisualFacingTarget != null)
+            {
+                VisualFacingTarget.rotation = worldRotation;
+            }
+
+            if (controllerWasEnabled)
+            {
+                _characterController.enabled = true;
+            }
+
+            PublishAnimationSnapshot(Mathf.Abs(locomotionNormalized), true, 0f, false, "scripted_movement_pose");
+            return true;
         }
 
         private void OnMacroSceneLoaded(MacroSceneLoadedEvent @event)
@@ -109,6 +200,7 @@ namespace Bitbox
             if (!@event.SceneType.IsGameplayScene())
             {
                 _verticalVelocity = 0f;
+                _isFloatingInWater = false;
                 ClearActiveSupport();
                 PublishGroundedIdleAnimation($"macro_scene_loaded:{@event.SceneType}");
                 return;
@@ -124,6 +216,7 @@ namespace Bitbox
             if (_isPaused || !_currentMacroScene.IsGameplayScene())
             {
                 _verticalVelocity = 0f;
+                _isFloatingInWater = false;
                 ClearActiveSupport();
                 PublishGroundedIdleAnimation(@event.IsPaused ? "pause_entered" : "pause_released_outside_gameplay");
             }
@@ -173,6 +266,7 @@ namespace Bitbox
 
             _verticalVelocity = 0f;
             _lastGroundedTime = Time.time;
+            _isFloatingInWater = false;
             ClearActiveSupport();
             PublishGroundedIdleAnimation($"gameplay_spawn_snap:{sceneType}");
             LogInfo(
@@ -212,47 +306,91 @@ namespace Bitbox
             Vector2 rawMoveInput = _moveAction.ReadValue<Vector2>();
             Vector2 moveInput = ResolveGameplayMoveInput(rawMoveInput, controlSchemeKind, gameplayData.MoveInputDeadZone);
             Vector3 moveDirection = CalculateCameraRelativeMove(moveInput, GameplayCameraTransform);
-            bool isGroundedBeforeMove = ResolveGroundedState(_characterController.isGrounded || TryResolveGroundSupport(out _), false);
-            Vector3 supportDisplacement = ResolveSupportDisplacement();
+            bool hasGroundSupportBeforeMove = TryResolveGroundSupport(out _);
+            bool rawGroundedBeforeMove = _characterController.isGrounded || hasGroundSupportBeforeMove;
+            bool isGroundedBeforeMove = ResolveGroundedState(rawGroundedBeforeMove, false);
+            WaterFloatFrame waterFloatBeforeMove = ResolveWaterFloatFrame(gameplayData, rawGroundedBeforeMove, allowEnter: true);
+            bool isFloatingBeforeMove = waterFloatBeforeMove.IsFloating;
+            Vector3 supportDisplacement = isFloatingBeforeMove ? Vector3.zero : ResolveSupportDisplacement();
+            if (isFloatingBeforeMove)
+            {
+                ClearActiveSupport();
+            }
 
             RotateVisualFacingTarget(moveDirection, gameplayData.RotationSharpness);
-            bool jumpStartedThisFrame = UpdateVerticalVelocity(gameplayData, isGroundedBeforeMove);
+            bool jumpStartedThisFrame = UpdateVerticalVelocity(
+                gameplayData,
+                isGroundedBeforeMove,
+                isFloatingBeforeMove,
+                waterFloatBeforeMove);
 
-            Vector3 velocity = moveDirection * gameplayData.WalkSpeed;
+            float movementSpeed = gameplayData.WalkSpeed * (isFloatingBeforeMove ? gameplayData.WaterMoveSpeedMultiplier : 1f);
+            Vector3 velocity = moveDirection * movementSpeed;
             velocity.y = _verticalVelocity;
             CollisionFlags collisionFlags = _characterController.Move(supportDisplacement + (velocity * Time.deltaTime));
             bool hasGroundSupportAfterMove = TryResolveGroundSupport(out Transform supportTransform);
             bool rawGroundedAfterMove = (collisionFlags & CollisionFlags.Below) != 0 || _characterController.isGrounded || hasGroundSupportAfterMove;
             bool isGroundedAfterMove = ResolveGroundedState(rawGroundedAfterMove, jumpStartedThisFrame);
+            WaterFloatFrame waterFloatAfterMove = ResolveWaterFloatFrame(gameplayData, rawGroundedAfterMove, allowEnter: !jumpStartedThisFrame);
+            bool isFloatingAfterMove = !jumpStartedThisFrame && waterFloatAfterMove.IsFloating;
 
             if (isGroundedAfterMove && _verticalVelocity < 0f)
             {
                 _verticalVelocity = gameplayData.GroundedVerticalVelocity;
             }
 
-            UpdateActiveSupport(isGroundedAfterMove, supportTransform);
+            if (isFloatingAfterMove && _verticalVelocity < -gameplayData.WaterFloatSinkSpeed)
+            {
+                _verticalVelocity = -gameplayData.WaterFloatSinkSpeed;
+            }
+
+            UpdateActiveSupport(isGroundedAfterMove && !isFloatingAfterMove, supportTransform);
+            bool isGroundedForAnimation = isGroundedAfterMove || isFloatingAfterMove;
 
             return new PlayerLocomotionAnimationEvent(
                 ResolveLocomotionAnimationValue(moveInput, controlSchemeKind),
-                isGroundedAfterMove,
+                isGroundedForAnimation,
                 _verticalVelocity,
                 jumpStartedThisFrame);
         }
 
-        private bool UpdateVerticalVelocity(PlayerGameplayData gameplayData, bool isGrounded)
+        private bool UpdateVerticalVelocity(
+            PlayerGameplayData gameplayData,
+            bool isGrounded,
+            bool isFloatingInWater,
+            WaterFloatFrame waterFloatFrame)
         {
-            if (isGrounded && _verticalVelocity < 0f)
+            if (isGrounded && !isFloatingInWater && _verticalVelocity < 0f)
             {
                 _verticalVelocity = gameplayData.GroundedVerticalVelocity;
             }
 
             float riseGravity = gameplayData.Gravity * gameplayData.JumpRiseGravityMultiplier;
             bool jumpStartedThisFrame = false;
-            if (isGrounded && _jumpAction.WasPressedThisFrame())
+            if ((isGrounded || isFloatingInWater) && _jumpAction.WasPressedThisFrame())
             {
                 _lastGroundedTime = float.NegativeInfinity;
-                _verticalVelocity = Mathf.Sqrt(gameplayData.JumpHeight * 2f * riseGravity);
+                _verticalVelocity = isFloatingInWater
+                    ? PlayerWaterFloatUtility.CalculateWaterJumpVelocity(
+                        gameplayData.JumpHeight,
+                        gameplayData.Gravity,
+                        gameplayData.JumpRiseGravityMultiplier,
+                        gameplayData.WaterJumpHeightMultiplier)
+                    : Mathf.Sqrt(gameplayData.JumpHeight * 2f * riseGravity);
+                _isFloatingInWater = false;
                 jumpStartedThisFrame = true;
+            }
+
+            if (isFloatingInWater && !jumpStartedThisFrame && waterFloatFrame.HasWaterSample)
+            {
+                _verticalVelocity = PlayerWaterFloatUtility.CalculateFloatVerticalVelocity(
+                    transform.position.y,
+                    waterFloatFrame.WaterHeight,
+                    gameplayData.WaterSurfaceRootOffset,
+                    gameplayData.WaterFloatCorrectionSharpness,
+                    gameplayData.WaterFloatRiseSpeed,
+                    gameplayData.WaterFloatSinkSpeed);
+                return false;
             }
 
             float appliedGravityMultiplier = _verticalVelocity > 0f
@@ -260,6 +398,49 @@ namespace Bitbox
                 : gameplayData.JumpFallGravityMultiplier;
             _verticalVelocity -= gameplayData.Gravity * appliedGravityMultiplier * Time.deltaTime;
             return jumpStartedThisFrame;
+        }
+
+        private WaterFloatFrame ResolveWaterFloatFrame(
+            PlayerGameplayData gameplayData,
+            bool rawIsGrounded,
+            bool allowEnter)
+        {
+            if (!gameplayData.WaterFloatEnabled)
+            {
+                _isFloatingInWater = false;
+                return WaterFloatFrame.Empty;
+            }
+
+            Vector3 controllerBottomPoint = CalculateControllerBottomPoint();
+            bool hasWaterSample = WaterQuery.TrySample(controllerBottomPoint, out WaterSample waterSample);
+            float waterHeight = hasWaterSample ? waterSample.Height : 0f;
+
+            if (PlayerWaterFloatUtility.ShouldExitFloat(
+                    _isFloatingInWater,
+                    hasWaterSample,
+                    rawIsGrounded,
+                    transform.position.y,
+                    waterHeight,
+                    gameplayData.WaterExitHeight))
+            {
+                _isFloatingInWater = false;
+            }
+
+            if (!_isFloatingInWater
+                && allowEnter
+                && PlayerWaterFloatUtility.ShouldEnterFloat(
+                    gameplayData.WaterFloatEnabled,
+                    hasWaterSample,
+                    rawIsGrounded,
+                    _verticalVelocity,
+                    controllerBottomPoint.y,
+                    waterHeight,
+                    gameplayData.WaterEnterDepth))
+            {
+                _isFloatingInWater = true;
+            }
+
+            return new WaterFloatFrame(_isFloatingInWater, hasWaterSample, waterHeight);
         }
 
         private bool ResolveGroundedState(bool rawIsGrounded, bool jumpStartedThisFrame)
@@ -365,6 +546,16 @@ namespace Bitbox
                 : hit.collider.transform;
 
             return supportTransform != null;
+        }
+
+        private Vector3 CalculateControllerBottomPoint()
+        {
+            Vector3 controllerCenter = transform.TransformPoint(_characterController.center);
+            float bottomY = PlayerWaterFloatUtility.CalculateControllerBottomY(
+                controllerCenter,
+                _characterController.height,
+                _characterController.radius);
+            return new Vector3(controllerCenter.x, bottomY, controllerCenter.z);
         }
 
         private Transform GameplayCameraTransform => _playerDataReference.GameplayCamera.transform;
@@ -488,6 +679,22 @@ namespace Bitbox
         {
             KeyboardMouse,
             Gamepad
+        }
+
+        private readonly struct WaterFloatFrame
+        {
+            public static readonly WaterFloatFrame Empty = new(false, false, 0f);
+
+            public WaterFloatFrame(bool isFloating, bool hasWaterSample, float waterHeight)
+            {
+                IsFloating = isFloating;
+                HasWaterSample = hasWaterSample;
+                WaterHeight = waterHeight;
+            }
+
+            public bool IsFloating { get; }
+            public bool HasWaterSample { get; }
+            public float WaterHeight { get; }
         }
     }
 }
