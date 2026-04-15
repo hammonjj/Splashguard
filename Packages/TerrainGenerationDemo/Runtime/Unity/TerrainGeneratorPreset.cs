@@ -4,8 +4,8 @@ using UnityEngine;
 namespace BitBox.TerrainGeneration.Unity
 {
     [CreateAssetMenu(
-        fileName = "TerrainGeneratorPreset",
-        menuName = "Terrain Generation/Terrain Generator Preset")]
+        fileName = "TerraForgePreset",
+        menuName = "BitBox Arcade/TerraForge Preset")]
     public sealed class TerrainGeneratorPreset : ScriptableObject
     {
         [Header("Grid")]
@@ -85,6 +85,25 @@ namespace BitBox.TerrainGeneration.Unity
 
         [SerializeField, Range(0, 8), Tooltip("Number of color smoothing passes applied to rendered terrain zones. Higher values soften zone transitions without changing placement rules.")]
         private int _zoneColorSmoothingPasses = 2;
+
+        [Header("Zone Colors")]
+        [SerializeField, Tooltip("Color used for deep water zone vertices and zone preview pixels.")]
+        private Color _deepWaterColor = TerrainZoneColorPalette.Default.DeepWater;
+
+        [SerializeField, Tooltip("Color used for shallow water zone vertices and zone preview pixels.")]
+        private Color _shallowWaterColor = TerrainZoneColorPalette.Default.ShallowWater;
+
+        [SerializeField, Tooltip("Color used for beach zone vertices and zone preview pixels.")]
+        private Color _beachColor = TerrainZoneColorPalette.Default.Beach;
+
+        [SerializeField, Tooltip("Color used for grassland zone vertices and zone preview pixels.")]
+        private Color _grasslandColor = TerrainZoneColorPalette.Default.Grassland;
+
+        [SerializeField, Tooltip("Color used for steep rock zone vertices and zone preview pixels.")]
+        private Color _rockColor = TerrainZoneColorPalette.Default.Rock;
+
+        [SerializeField, Tooltip("Color used for high mountain zone vertices and zone preview pixels.")]
+        private Color _mountainColor = TerrainZoneColorPalette.Default.Mountain;
 
         [Header("Props")]
         [SerializeField, Tooltip("When enabled, the demo runner instantiates deterministic placeholder props from the prop library.")]
@@ -173,6 +192,17 @@ namespace BitBox.TerrainGeneration.Unity
                 _beachHeightBand,
                 _rockSlopeThreshold,
                 _mountainElevationThreshold);
+        }
+
+        public TerrainZoneColorPalette ToZoneColorPalette()
+        {
+            return new TerrainZoneColorPalette(
+                _deepWaterColor,
+                _shallowWaterColor,
+                _beachColor,
+                _grasslandColor,
+                _rockColor,
+                _mountainColor);
         }
 
         public TerrainPropPlacementSettings ToPropPlacementSettings()

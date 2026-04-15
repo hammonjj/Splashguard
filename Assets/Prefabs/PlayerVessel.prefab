@@ -195,7 +195,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 05c09cb8aa07b49dfb3191ad79485d7a, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Bitbox.HelmControl
   ShowGizmos: 0
   logLevel: 1
@@ -213,8 +213,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bac23e17ae114dd449a0cbbc4cf03296, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   generateWaterForces: 1
   useJobs: 1
   flatWater: 0
@@ -469,7 +469,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dab5c7d4c32e743048dfca98e2d5914f, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.Splines::UnityEngine.Splines.SplineContainer
   m_Spline:
     m_EditModeType: 1
@@ -623,7 +623,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c8aa18600b9f4161934df17bfeee8b8d, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Library::BitBox.Library.Debugging.ColliderGizmoVisualizer
   ShowGizmos: 0
   logLevel: 1
@@ -703,7 +703,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c8aa18600b9f4161934df17bfeee8b8d, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Library::BitBox.Library.Debugging.ColliderGizmoVisualizer
   ShowGizmos: 0
   logLevel: 1
@@ -946,7 +946,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 51e60eccba7f74d8ca6c64100921b288, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Bitbox.AnchorControls
   ShowGizmos: 0
   logLevel: 1
@@ -1214,7 +1214,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c8aa18600b9f4161934df17bfeee8b8d, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Library::BitBox.Library.Debugging.ColliderGizmoVisualizer
   ShowGizmos: 0
   logLevel: 1
@@ -1307,7 +1307,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8b9b8b9f4e6f46a3b57d7b0f5c7e9d21, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Bitbox.Toymageddon.Nautical.InteractionCameraAnchors
   ShowGizmos: 0
   logLevel: 1

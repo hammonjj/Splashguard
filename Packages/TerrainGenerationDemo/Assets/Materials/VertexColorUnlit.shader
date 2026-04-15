@@ -1,4 +1,4 @@
-Shader "TerrainGenerationDemo/VertexColorUnlit"
+Shader "TerraForge/VertexColorUnlit"
 {
     SubShader
     {

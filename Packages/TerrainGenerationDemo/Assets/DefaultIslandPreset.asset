@@ -15,9 +15,9 @@ MonoBehaviour:
   _seed: 965839563
   _resolutionX: 129
   _resolutionZ: 129
-  _worldSizeX: 96
-  _worldSizeZ: 96
-  _heightScale: 14
+  _worldSizeX: 300
+  _worldSizeZ: 300
+  _heightScale: 20
   _seaLevel: 0
   _noiseScale: 22
   _octaves: 8

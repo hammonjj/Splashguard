@@ -5,8 +5,8 @@ using UnityEngine;
 namespace BitBox.TerrainGeneration.Unity
 {
     [CreateAssetMenu(
-        fileName = "TerrainPropLibrary",
-        menuName = "Terrain Generation/Terrain Prop Library")]
+        fileName = "TerraForgePropLibrary",
+        menuName = "BitBox Arcade/TerraForge Prop Library")]
     public sealed class TerrainPropLibrary : ScriptableObject
     {
         [SerializeField] private TerrainPropPrefabEntry[] _prefabs = Array.Empty<TerrainPropPrefabEntry>();

@@ -203,51 +203,51 @@ Material:
     - _alphaClip: 0
     - _dithering: 0
     - _dithering_size: 2206
-    - _fakeHorizonWaveDensity: 0.1
-    - _fakeHorizonWavesIntensity: 0.1
+    - _fakeHorizonWaveDensity: 0.03
+    - _fakeHorizonWavesIntensity: 0.02
     - _farDistanceAttenuation: 0.001
     - _groundColorScaterring: 25
-    - _horizonMaximalSlope: 0.5
+    - _horizonMaximalSlope: 0.18
     - _horizonWavesSize: 0
     - _intensity: 0.5
     - _metallic: 0
-    - _minAlpha: 0.5
-    - _minimalTransparancy: 0.5
-    - _minimalTransparency: 0.5
+    - _minAlpha: 0.82
+    - _minimalTransparancy: 0.82
+    - _minimalTransparency: 0.82
     - _normalPrecision: 0.1
-    - _oceanIntensity: 0.16000001
+    - _oceanIntensity: 0.45
     - _opacity: 0.5
     - _power: 1.01
     - _resize: 0
-    - _rippleIntensity: 1
+    - _rippleIntensity: 0.08
     - _ripples1Direction: 0
-    - _ripples1Intensity: 0.407
-    - _ripples1Size: 5
+    - _ripples1Intensity: 0.08
+    - _ripples1Size: 18
     - _ripples1Speed: 0.03
-    - _ripples1Strength: 0.2
+    - _ripples1Strength: 0.04
     - _ripples2Direction: -180
-    - _ripples2Intensity: 0.417
-    - _ripples2Size: 20
+    - _ripples2Intensity: 0.044
+    - _ripples2Size: 36
     - _ripples2Speed: 0.08
-    - _ripples2Strength: -0.2
+    - _ripples2Strength: -0.035
     - _ripples3Direction: 0
-    - _ripples3Intensity: 1
-    - _ripples3Size: 20
+    - _ripples3Intensity: 0.02
+    - _ripples3Size: 48
     - _ripples3Speed: 0.08
     - _ripplesDirection: 0
-    - _ripplesIntensity: 0.5
+    - _ripplesIntensity: 0.08
     - _ripplesSize: 0.1
     - _ripples_lenght: 30
-    - _smoothness: 1
-    - _subSurfaceScatering: 0.8
-    - _subSurfaceScattering: 0.5
-    - _transparancy: 0.5
-    - _transparency: 0.5
-    - _transparencyFactor: 0.5
+    - _smoothness: 0.58
+    - _subSurfaceScatering: 0.28
+    - _subSurfaceScattering: 0.28
+    - _transparancy: 0.18
+    - _transparency: 0.18
+    - _transparencyFactor: 0.18
     - _turbulenceScale: 0.01
     - _udnerwaterTransaprancy: 1
     - _underwater: 0
-    - _waterSmoothness: 0.29
+    - _waterSmoothness: 0.16
     - dispersion: 0.5
     - losangeRatio: 0.3
     - randomization: 0
@@ -258,19 +258,19 @@ Material:
     - swellWaveLength: 50
     - swellWavelength: 100
     - swellWidthToLenghtRatio: 0.5
-    - wavesIntensity: 1.2
+    - wavesIntensity: 0.45
     m_Colors:
     - Color_B8AC16AC: {r: 0.130073, g: 0.303236, b: 0.745283, a: 1}
     - _BaseColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     - _Color: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _SpecColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
-    - _groundColor: {r: 0.6603774, g: 0.5951459, b: 0.38314348, a: 0}
+    - _SpecColor: {r: 0.08, g: 0.12, b: 0.16, a: 1}
+    - _groundColor: {r: 0.16, g: 0.72, b: 0.64, a: 0}
     - _terrainPosition: {r: 0, g: -200, b: 0, a: 0}
     - _terrainScale: {r: 1, g: 1, b: 1, a: 0}
-    - _totalLigthColor: {r: 1, g: 0.97843134, b: 0.9196079, a: 1}
-    - _waterColor: {r: 0.061320752, g: 0.14198805, b: 0.24528301, a: 1}
-    - waterColor: {r: 0.19428623, g: 0.57415575, b: 0.6981132, a: 1}
+    - _totalLigthColor: {r: 1, g: 1, b: 1, a: 1}
+    - _waterColor: {r: 0.03, g: 0.25, b: 0.43, a: 1}
+    - waterColor: {r: 0.03, g: 0.25, b: 0.43, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!114 &6358312269964169632

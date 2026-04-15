@@ -46,12 +46,15 @@ namespace BitBox.TerrainGeneration.Unity
             int smoothingPasses = _preset != null
                 ? _preset.ZoneColorSmoothingPasses
                 : _zoneColorSmoothingPasses;
+            TerrainZoneColorPalette colorPalette = _preset != null
+                ? _preset.ToZoneColorPalette()
+                : TerrainZoneColorPalette.Default;
             LastLayeredMeshes = LayeredTerrainMeshBuilder.Build(
                 LastHeightfield,
                 LastZoneMap,
                 request.WorldSizeX,
                 request.WorldSizeZ,
-                TerrainZoneColorPalette.Default,
+                colorPalette,
                 smoothingPasses);
             LastMeshArrays = LastLayeredMeshes.Land;
 

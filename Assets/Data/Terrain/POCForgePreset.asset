@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0df63ea83be348958a0eab42b3bd2b19, type: 3}
+  m_Name: POCForgePreset
+  m_EditorClassIdentifier: BitBox.TerrainGeneration.Unity::BitBox.TerrainGeneration.Unity.TerrainGeneratorPreset
+  _seed: -996131168
+  _resolutionX: 256
+  _resolutionZ: 256
+  _worldSizeX: 300
+  _worldSizeZ: 300
+  _heightScale: 10
+  _seaLevel: 0
+  _noiseScale: 161.61
+  _octaves: 12
+  _persistence: 0.217
+  _lacunarity: 7.19
+  _noiseMode: 1
+  _maskMode: 1
+  _falloffStrength: 7.48
+  _falloffExponent: 1.45
+  _islandCount: 13
+  _islandRadius: 1.35
+  _minIslandSeparation: 0.752
+  _blendMode: 2
+  _shallowWaterDepth: 2
+  _beachHeightBand: 1.02
+  _rockSlopeThreshold: 4.48
+  _mountainElevationThreshold: 0.771
+  _zoneColorSmoothingPasses: 2
+  _generateProps: 0
+  _propLibrary: {fileID: 0}
+  _treeDensity: 9
+  _rockDensity: 10
+  _grassPatchDensity: 20
+  _driftwoodDensity: 3
+  _treeMaxSlope: 0.32
+  _grassPatchMaxSlope: 0.38
+  _driftwoodMaxSlope: 0.2
+  _treeMinSpacing: 4.5
+  _rockMinSpacing: 3.5
+  _grassPatchMinSpacing: 2.25
+  _driftwoodMinSpacing: 5
+  _propMinScale: 0.75
+  _propMaxScale: 1.35
+  _updateMeshCollider: 0

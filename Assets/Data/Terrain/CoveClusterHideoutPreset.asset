@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0df63ea83be348958a0eab42b3bd2b19, type: 3}
+  m_Name: CoveClusterHideoutPreset
+  m_EditorClassIdentifier: 
+  _seed: 1111406159
+  _resolutionX: 257
+  _resolutionZ: 257
+  _worldSizeX: 600
+  _worldSizeZ: 600
+  _heightScale: 26
+  _seaLevel: 1.15
+  _noiseScale: 55
+  _octaves: 7
+  _persistence: 0.54
+  _lacunarity: 2.05
+  _noiseMode: 0
+  _maskMode: 3
+  _falloffStrength: 13.25
+  _falloffExponent: 2.35
+  _islandCount: 5
+  _islandRadius: 0.285
+  _minIslandSeparation: 0.18
+  _blendMode: 2
+  _shallowWaterDepth: 4.5
+  _beachHeightBand: 1.2
+  _rockSlopeThreshold: 0.32
+  _mountainElevationThreshold: 0.68
+  _zoneColorSmoothingPasses: 5
+  _deepWaterColor: {r: 0.01, g: 0.035, b: 0.065, a: 1}
+  _shallowWaterColor: {r: 0.04, g: 0.2, b: 0.22, a: 1}
+  _beachColor: {r: 0.3, g: 0.26, b: 0.16, a: 1}
+  _grasslandColor: {r: 0.05, g: 0.18, b: 0.06, a: 1}
+  _rockColor: {r: 0.2, g: 0.2, b: 0.19, a: 1}
+  _mountainColor: {r: 0.3, g: 0.3, b: 0.27, a: 1}
+  _generateProps: 1
+  _propLibrary: {fileID: 11400000, guid: f10c2632cd2a4e1ea9d9458b3bd12001, type: 2}
+  _treeDensity: 5
+  _rockDensity: 6
+  _grassPatchDensity: 11
+  _driftwoodDensity: 1.8
+  _treeMaxSlope: 0.3
+  _grassPatchMaxSlope: 0.36
+  _driftwoodMaxSlope: 0.18
+  _treeMinSpacing: 8
+  _rockMinSpacing: 6
+  _grassPatchMinSpacing: 4.5
+  _driftwoodMinSpacing: 9
+  _propMinScale: 0.75
+  _propMaxScale: 1.45
+  _updateMeshCollider: 0

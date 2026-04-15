@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0df63ea83be348958a0eab42b3bd2b19, type: 3}
+  m_Name: NavalCombatArchipelagoPreset
+  m_EditorClassIdentifier: 
+  _seed: -1572008549
+  _resolutionX: 257
+  _resolutionZ: 257
+  _worldSizeX: 600
+  _worldSizeZ: 600
+  _heightScale: 22
+  _seaLevel: 0
+  _noiseScale: 45
+  _octaves: 6
+  _persistence: 0.47
+  _lacunarity: 2
+  _noiseMode: 0
+  _maskMode: 3
+  _falloffStrength: 12
+  _falloffExponent: 2
+  _islandCount: 7
+  _islandRadius: 0.17
+  _minIslandSeparation: 0.25
+  _blendMode: 0
+  _shallowWaterDepth: 3.5
+  _beachHeightBand: 1.1
+  _rockSlopeThreshold: 0.35
+  _mountainElevationThreshold: 0.75
+  _zoneColorSmoothingPasses: 4
+  _generateProps: 1
+  _propLibrary: {fileID: 11400000, guid: f10c2632cd2a4e1ea9d9458b3bd12001, type: 2}
+  _treeDensity: 3.5
+  _rockDensity: 4.5
+  _grassPatchDensity: 8
+  _driftwoodDensity: 1.2
+  _treeMaxSlope: 0.28
+  _grassPatchMaxSlope: 0.34
+  _driftwoodMaxSlope: 0.18
+  _treeMinSpacing: 9
+  _rockMinSpacing: 7
+  _grassPatchMinSpacing: 5
+  _driftwoodMinSpacing: 10
+  _propMinScale: 0.8
+  _propMaxScale: 1.4
+  _updateMeshCollider: 0

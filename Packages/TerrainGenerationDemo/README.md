@@ -1,6 +1,6 @@
-# TerrainGenerationDemo
+# TerraForge
 
-`TerrainGenerationDemo` is an embedded Unity package for generating deterministic procedural island terrain as a mesh. It includes a demo scene, a default preset, zone-based vertex coloring, generated placeholder props, preview generation, and basic export tools.
+`TerraForge` is an embedded Unity package for deterministic procedural terrain generation as a mesh. It includes a demo scene, a default preset, zone-based vertex coloring, generated placeholder props, preview generation, and basic export tools.
 
 ## Quick Start
 
@@ -12,13 +12,24 @@
 4. Press Play or enable/regenerate the runner to create the generated child object:
    `Generated Island Terrain`
 5. Open the editor tool from:
-   `Tools > Terrain Generation > Demo Generator`
+   `Tools > BitBox Arcade > TerraForge`
 
-The editor window is the easiest way to tune values, preview the island, randomize the seed, generate into the open scene, and export assets.
+The editor window is the easiest way to tune values, preview the terrain, randomize the seed, generate into the open scene, and export assets.
+
+## Install From Git
+
+Add TerraForge through Unity Package Manager with one of these Git URLs:
+
+- Standalone package repository:
+  `https://github.com/<org>/<repo>.git`
+- Package inside a Unity project repository:
+  `https://github.com/<org>/<repo>.git?path=Packages/TerrainGenerationDemo`
+
+The package is licensed under MIT. Commercial and hobby use are allowed as long as the copyright and license notice are preserved.
 
 ## Editor Window Workflow
 
-Open `Tools > Terrain Generation > Demo Generator`.
+Open `Tools > BitBox Arcade > TerraForge`.
 
 The window has these main controls:
 
@@ -184,7 +195,7 @@ Run them with Unity Test Runner or batch mode:
   -projectPath '/Users/jameshammond/Documents/Github/Personnel/Splashguard' \
   -runTests \
   -testPlatform EditMode \
-  -testResults /tmp/TerrainGenerationDemo_EditModeResults.xml \
+  -testResults /tmp/TerraForge_EditModeResults.xml \
   -logFile -
 ```
 
@@ -195,5 +206,5 @@ Run them with Unity Test Runner or batch mode:
 - If physics is not needed, leave `Update Mesh Collider` disabled.
 - If archipelago settings do not seem to matter, set `Mask Mode` to `Archipelago`.
 - If props do not appear, verify `Generate Props` is enabled and `Prop Library` references `DefaultTerrainPropLibrary`.
-- If zone colors do not appear, verify the terrain material uses `TerrainGenerationDemo/VertexColorUnlit`.
+- If zone colors do not appear, verify the terrain material uses `TerraForge/VertexColorUnlit`.
 - If batch tests stall before NUnit results, check Unity licensing locally; generation code can still be statically compiled independently.

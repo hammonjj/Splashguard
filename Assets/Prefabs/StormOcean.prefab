@@ -1460,6 +1460,7 @@ GameObject:
   - component: {fileID: 1919658865892365738}
   - component: {fileID: 1919658865892365744}
   - component: {fileID: 1919658865892365745}
+  - component: {fileID: 1919658865892365752}
   m_Layer: 4
   m_Name: StormOcean
   m_TagString: Untagged
@@ -1515,36 +1516,36 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   clickHereToRefresh: 0
-  waterColor: {r: 0.061320752, g: 0.14198805, b: 0.24528301, a: 1}
+  waterColor: {r: 0.03, g: 0.25, b: 0.43, a: 1}
   terrain: {fileID: 0}
-  waveIntensity: 1
-  wavelength0: 12
-  wavelength1: 6
-  wavelength2: 4
-  wavelength3: 3
-  intensity0: 1.2
-  intensity1: 1.1
-  intensity2: 1.1
-  intensity3: 1.2
-  direction0: 10
-  direction1: -25
-  direction2: 25
-  direction3: 0
-  waveDensity0: 0.9
-  waveDensity1: 0.9
-  waveDensity2: 0.9
-  waveDensity3: 0.9
-  setNumber0: 2
-  setNumber1: 1.7
-  setNumber2: 1.5
-  setNumber3: 1.3
-  swellHeightRef: 1.1m
-  swellPeriodRef: 3s
-  breakersExtraSpeedFactor: 1
-  breakersTorqueFactor: 1
+  waveIntensity: 0.42
+  wavelength0: 28
+  wavelength1: 16
+  wavelength2: 8
+  wavelength3: 4
+  intensity0: 0.55
+  intensity1: 0.35
+  intensity2: 0.18
+  intensity3: 0.08
+  direction0: 0
+  direction1: 35
+  direction2: -40
+  direction3: 75
+  waveDensity0: 0.96
+  waveDensity1: 0.96
+  waveDensity2: 0.95
+  waveDensity3: 0.95
+  setNumber0: 1.1
+  setNumber1: 1
+  setNumber2: 1
+  setNumber3: 1
+  swellHeightRef: 0.6m
+  swellPeriodRef: 4s
+  breakersExtraSpeedFactor: 0.15
+  breakersTorqueFactor: 0.08
   fixedFrameRate: 50
   particleLightingFactor: 1
-  oceanObjectDisplacementWithCameraAngle: 70
+  oceanObjectDisplacementWithCameraAngle: 45
 --- !u!114 &1919658865892365751
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1656,10 +1657,10 @@ VisualEffect:
       - m_Value: {x: 0.06857421, y: 0.14962603, z: 0.21698111, w: 1}
         m_Name: waterColor
         m_Overridden: 1
-      - m_Value: {x: 1, y: 0.97843134, z: 0.9196079, w: 1}
+      - m_Value: {x: 1, y: 1, z: 1, w: 1}
         m_Name: _totalLigthColor
         m_Overridden: 1
-      - m_Value: {x: 0.061320752, y: 0.14198805, z: 0.24528301, w: 1}
+      - m_Value: {x: 0.03, y: 0.25, z: 0.43, w: 1}
         m_Name: _waterColor
         m_Overridden: 1
     m_Uint:
@@ -1669,41 +1670,41 @@ VisualEffect:
     m_Matrix4x4f:
       m_Array:
       - m_Value:
-          e00: 12
-          e01: 1.2
-          e02: 0.17453292
-          e03: 0.100000024
-          e10: 6
-          e11: 1.1
-          e12: -0.43633232
-          e13: 0.100000024
-          e20: 4
-          e21: 1.1
-          e22: 0.43633232
-          e23: 0.100000024
-          e30: 3
-          e31: 1.2
-          e32: 0
-          e33: 0.100000024
+          e00: 28
+          e01: 0.23099999
+          e02: 0
+          e03: 0.04000002
+          e10: 16
+          e11: 0.147
+          e12: 0.61086524
+          e13: 0.04000002
+          e20: 8
+          e21: 0.0756
+          e22: -0.6981317
+          e23: 0.050000012
+          e30: 4
+          e31: 0.0336
+          e32: 1.3089969
+          e33: 0.050000012
         m_Name: _LIDR
         m_Overridden: 1
       - m_Value:
-          e00: 2
-          e01: 0.5235988
-          e02: 2.164232
-          e03: 2.2882283
-          e10: 1.7
-          e11: 1.0471976
-          e12: 1.530343
-          e13: 3.2360432
-          e20: 1.5
-          e21: 1.5707964
-          e22: 1.24952
-          e23: 3.9633274
-          e30: 1.3
-          e31: 2.0943952
-          e32: 1.082116
-          e33: 4.5764565
+          e00: 1.1
+          e01: 0.22439948
+          e02: 3.305919
+          e03: 1.4979969
+          e10: 1
+          e11: 0.3926991
+          e12: 2.49904
+          e13: 1.9816637
+          e20: 1
+          e21: 0.7853982
+          e22: 1.767088
+          e23: 2.8024957
+          e30: 1
+          e31: 1.5707964
+          e32: 1.24952
+          e33: 3.9633274
         m_Name: _NKVW
         m_Overridden: 1
     m_AnimationCurve:
@@ -1951,6 +1952,38 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &1919658865892365752
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1919658865892365739}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f762f1f0b0d4c2d9e0f0bb7f055e521, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _applyEveryFrame: 1
+  _disableOceanVfx: 1
+  _waterColor: {r: 0.03, g: 0.25, b: 0.43, a: 1}
+  _waveIntensity: 0.42
+  _wavelengths: {x: 28, y: 16, z: 8, w: 4}
+  _waveSteepness: {x: 0.55, y: 0.35, z: 0.18, w: 0.08}
+  _waveDirections: {x: 0, y: 35, z: -40, w: 75}
+  _waveDensities: {x: 0.96, y: 0.96, z: 0.95, w: 0.95}
+  _waveSetCounts: {x: 1.1, y: 1, z: 1, w: 1}
+  _breakerSpeedFactor: 0.15
+  _breakerTorqueFactor: 0.08
+  _cameraDisplacement: 45
+  _minimalTransparency: 0.82
+  _surfaceSmoothness: 0.58
+  _waterSmoothness: 0.16
+  _rippleIntensity: 0.08
+  _shaderWaveIntensity: 0.45
+  _subSurfaceScattering: 0.28
+  _specularColor: {r: 0.08, g: 0.12, b: 0.16, a: 1}
+  _groundColor: {r: 0.16, g: 0.72, b: 0.64, a: 0}
 --- !u!1 &1919658865935059804
 GameObject:
   m_ObjectHideFlags: 0

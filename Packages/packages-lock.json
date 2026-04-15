@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "com.bitbox.terraingenerationdemo": {
+    "com.bitboxarcade.terraforge": {
       "version": "file:TerrainGenerationDemo",
       "depth": 0,
       "source": "embedded",

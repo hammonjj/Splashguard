@@ -17,7 +17,7 @@ namespace BitBox.TerrainGeneration.Unity
             {
                 mesh = new Mesh
                 {
-                    name = "Generated Island Mesh"
+                    name = "Generated TerraForge Mesh"
                 };
                 meshFilter.sharedMesh = mesh;
             }
@@ -37,7 +37,7 @@ namespace BitBox.TerrainGeneration.Unity
         {
             var mesh = new Mesh
             {
-                name = string.IsNullOrWhiteSpace(meshName) ? "Generated Island Mesh" : meshName
+                name = string.IsNullOrWhiteSpace(meshName) ? "Generated TerraForge Mesh" : meshName
             };
             ApplyToMesh(mesh, arrays);
             return mesh;

@@ -14,7 +14,7 @@ namespace BitBox.TerrainGeneration.Editor.Export
                 AssetDatabase.DeleteAsset(assetPath);
             }
 
-            Mesh mesh = UnityMeshApplier.CreateMesh(arrays, "Generated Island Mesh");
+            Mesh mesh = UnityMeshApplier.CreateMesh(arrays, "Generated TerraForge Mesh");
             AssetDatabase.CreateAsset(mesh, assetPath);
             AssetDatabase.SaveAssets();
             return mesh;

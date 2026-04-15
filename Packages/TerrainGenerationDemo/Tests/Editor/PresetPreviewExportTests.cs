@@ -33,11 +33,14 @@ namespace BitBox.TerrainGeneration.Tests.Editor
                 serializedPreset.FindProperty("_resolutionZ").intValue = 19;
                 serializedPreset.FindProperty("_beachHeightBand").floatValue = 1.75f;
                 serializedPreset.FindProperty("_zoneColorSmoothingPasses").intValue = 4;
+                serializedPreset.FindProperty("_beachColor").colorValue = new Color(0.25f, 0.2f, 0.12f, 1f);
+                serializedPreset.FindProperty("_grasslandColor").colorValue = new Color(0.05f, 0.18f, 0.07f, 1f);
                 serializedPreset.FindProperty("_treeDensity").floatValue = 11f;
                 serializedPreset.ApplyModifiedPropertiesWithoutUndo();
 
                 TerrainGenerationRequest request = preset.ToRequest();
                 TerrainZoneSettings zoneSettings = preset.ToZoneSettings();
+                TerrainZoneColorPalette colorPalette = preset.ToZoneColorPalette();
                 TerrainPropPlacementSettings propSettings = preset.ToPropPlacementSettings();
 
                 Assert.AreEqual(9001, request.Seed);
@@ -45,6 +48,8 @@ namespace BitBox.TerrainGeneration.Tests.Editor
                 Assert.AreEqual(19, request.ResolutionZ);
                 Assert.AreEqual(1.75f, zoneSettings.BeachHeightBand);
                 Assert.AreEqual(4, preset.ZoneColorSmoothingPasses);
+                Assert.AreEqual(new Color(0.25f, 0.2f, 0.12f, 1f), colorPalette.Beach);
+                Assert.AreEqual(new Color(0.05f, 0.18f, 0.07f, 1f), colorPalette.Grassland);
                 Assert.AreEqual(11f, propSettings.TreeDensity);
             }
             finally
