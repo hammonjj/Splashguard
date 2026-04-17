@@ -164,6 +164,150 @@ namespace Bitbox.Splashguard.Enemies
 
             return Mathf.Clamp01(slowTurnThrottle);
         }
+
+        public static float ComputeArriveThrottle(
+            Vector3 forward,
+            Vector3 toDestination,
+            float slowTurnAngleDegrees,
+            float slowTurnThrottle,
+            float minimumCruiseThrottle,
+            float slowdownDistance,
+            float acceptanceRadius)
+        {
+            toDestination.y = 0f;
+            float distance = toDestination.magnitude;
+            if (distance <= Mathf.Max(0f, acceptanceRadius))
+            {
+                return 0f;
+            }
+
+            float turnThrottle = ComputeThrottleInput(forward, toDestination, slowTurnAngleDegrees, slowTurnThrottle);
+            float cruiseFloor = Mathf.Clamp01(minimumCruiseThrottle);
+            float arrivalFactor = Mathf.Clamp01((distance - acceptanceRadius) / Mathf.Max(0.1f, slowdownDistance));
+            float arriveThrottle = Mathf.Lerp(cruiseFloor, 1f, arrivalFactor);
+            return Mathf.Clamp01(Mathf.Max(cruiseFloor, turnThrottle * arriveThrottle));
+        }
+    }
+
+    public readonly struct EnemyTerrainAvoidanceDecision
+    {
+        public EnemyTerrainAvoidanceDecision(
+            bool centerBlocked,
+            bool leftBlocked,
+            bool rightBlocked,
+            float steeringBias,
+            bool shouldReverse)
+        {
+            CenterBlocked = centerBlocked;
+            LeftBlocked = leftBlocked;
+            RightBlocked = rightBlocked;
+            SteeringBias = steeringBias;
+            ShouldReverse = shouldReverse;
+        }
+
+        public bool CenterBlocked { get; }
+        public bool LeftBlocked { get; }
+        public bool RightBlocked { get; }
+        public float SteeringBias { get; }
+        public bool ShouldReverse { get; }
+        public bool AnyBlocked => CenterBlocked || LeftBlocked || RightBlocked;
+    }
+
+    public static class EnemyTerrainAvoidanceUtility
+    {
+        public static EnemyTerrainAvoidanceDecision ResolveFanDecision(
+            bool centerBlocked,
+            bool leftBlocked,
+            bool rightBlocked,
+            float steeringWeight)
+        {
+            float weight = Mathf.Clamp(steeringWeight, 0f, 2f);
+            if (!centerBlocked && !leftBlocked && !rightBlocked)
+            {
+                return new EnemyTerrainAvoidanceDecision(false, false, false, 0f, false);
+            }
+
+            if (centerBlocked && leftBlocked && rightBlocked)
+            {
+                return new EnemyTerrainAvoidanceDecision(true, true, true, weight, true);
+            }
+
+            float steeringBias = 0f;
+            if (centerBlocked)
+            {
+                steeringBias = !leftBlocked && rightBlocked ? -weight : weight;
+            }
+            else if (leftBlocked && !rightBlocked)
+            {
+                steeringBias = weight;
+            }
+            else if (rightBlocked && !leftBlocked)
+            {
+                steeringBias = -weight;
+            }
+
+            return new EnemyTerrainAvoidanceDecision(
+                centerBlocked,
+                leftBlocked,
+                rightBlocked,
+                steeringBias,
+                false);
+        }
+    }
+
+    public static class NavalWaterPointValidator
+    {
+        public static bool TryProjectToValidPoint(
+            Vector3 desiredPoint,
+            float searchRadius,
+            int rings,
+            int samplesPerRing,
+            Func<Vector3, bool> isCandidateValid,
+            out Vector3 validPoint)
+        {
+            validPoint = desiredPoint;
+            if (isCandidateValid == null)
+            {
+                return true;
+            }
+
+            if (isCandidateValid(desiredPoint))
+            {
+                return true;
+            }
+
+            searchRadius = Mathf.Max(0f, searchRadius);
+            rings = Mathf.Max(1, rings);
+            samplesPerRing = Mathf.Max(4, samplesPerRing);
+            if (searchRadius <= 0.01f)
+            {
+                return false;
+            }
+
+            for (int ring = 1; ring <= rings; ring++)
+            {
+                float radius = searchRadius * ring / rings;
+                float angleOffset = ring % 2 == 0 ? Mathf.PI / samplesPerRing : 0f;
+                for (int sample = 0; sample < samplesPerRing; sample++)
+                {
+                    float angle = angleOffset + (Mathf.PI * 2f * sample / samplesPerRing);
+                    Vector3 candidate = desiredPoint + new Vector3(
+                        Mathf.Cos(angle) * radius,
+                        0f,
+                        Mathf.Sin(angle) * radius);
+
+                    if (!isCandidateValid(candidate))
+                    {
+                        continue;
+                    }
+
+                    validPoint = candidate;
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 
     public static class EnemyWeaponMath

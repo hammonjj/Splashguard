@@ -1,4 +1,5 @@
 using BitBox.Library;
+using BitBox.Toymageddon.Debugging;
 using UnityEngine;
 
 namespace Bitbox.Splashguard.Enemies
@@ -38,6 +39,12 @@ namespace Bitbox.Splashguard.Enemies
 
         protected override void OnUpdated()
         {
+            if (DebugContext.EnemiesFrozen)
+            {
+                ClearTarget();
+                return;
+            }
+
             if (Time.time < _nextRefreshTime)
             {
                 return;
@@ -49,6 +56,12 @@ namespace Bitbox.Splashguard.Enemies
 
         public bool ForceSetTarget(PlayerVesselTarget target, bool publishAlert, string reason)
         {
+            if (DebugContext.EnemiesFrozen)
+            {
+                ClearTarget();
+                return false;
+            }
+
             if (target == null)
             {
                 return false;
@@ -69,9 +82,15 @@ namespace Bitbox.Splashguard.Enemies
             return true;
         }
 
+        public void ClearTarget()
+        {
+            _currentTarget = null;
+            _alertPublishedForCurrentTarget = false;
+        }
+
         public void PublishAlert(string reason)
         {
-            if (!HasTarget || _globalMessageBus == null)
+            if (DebugContext.EnemiesFrozen || !HasTarget || _globalMessageBus == null)
             {
                 return;
             }
@@ -115,6 +134,12 @@ namespace Bitbox.Splashguard.Enemies
 
         private void OnEnemyAlerted(EnemyAlertEvent @event)
         {
+            if (DebugContext.EnemiesFrozen)
+            {
+                ClearTarget();
+                return;
+            }
+
             if (@event == null || @event.Target == null || @event.SourceEnemyRoot == ResolveEnemyRoot())
             {
                 return;

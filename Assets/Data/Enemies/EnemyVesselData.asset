@@ -22,27 +22,37 @@ MonoBehaviour:
   _patrolRepathSecondsMax: 14
   _patrolCandidateAttempts: 12
   _patrolSeed: 1337
+  _patrolLingerSeconds: 0
   _attackRange: 70
   _idealStandoffDistance: 35
   _retreatDistance: 22
   _engagementWaypointAcceptanceRadius: 4.5
   _orbitStepDegrees: 65
-  _maxForwardSpeed: 10.5
-  _speedResponse: 1.8
-  _driveAcceleration: 7
-  _driveDeceleration: 8
-  _steeringTorque: 4
+  _maxForwardSpeed: 8
+  _speedResponse: 2.25
+  _driveAcceleration: 9.5
+  _driveDeceleration: 10
+  _steeringTorque: 7
   _steeringDamping: 2.25
   _steeringAuthoritySpeed: 4
-  _fullSteerAngleDegrees: 70
+  _fullSteerAngleDegrees: 60
   _slowTurnAngleDegrees: 45
-  _slowTurnThrottle: 0.65
+  _slowTurnThrottle: 0.45
+  _minimumCruiseThrottle: 0.28
+  _arrivalSlowdownDistance: 12
+  _destinationProjectionSearchRadius: 28
+  _destinationProjectionRings: 4
+  _destinationProjectionSamplesPerRing: 12
+  _movementDiagnosticInterval: 1.5
   _terrainProbeForwardDistance: 4
   _terrainProbeHeight: 3
   _terrainProbeDepth: 6
   _terrainClearance: 0.15
   _terrainBrakeAcceleration: 10
-  _burstShots: 5
-  _burstCooldownSeconds: 1.25
+  _terrainProbeFanAngleDegrees: 35
+  _emergencyReverseThrottle: 0.32
+  _avoidanceSteeringWeight: 0.85
+  _burstShots: 3
+  _burstCooldownSeconds: 3
   _weaponArcHalfAngleDegrees: 90
   _weaponAimDegreesPerSecond: 180

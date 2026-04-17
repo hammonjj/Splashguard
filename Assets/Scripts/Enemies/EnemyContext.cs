@@ -8,14 +8,14 @@ namespace Bitbox.Splashguard.Enemies
             GameObject enemyRoot,
             EnemyVesselData enemyData,
             EnemyTargetTracker targetTracker,
-            EnemyVesselMotor motor,
+            IEnemyMovementAgent movementAgent,
             EnemyVesselWeaponController weaponController,
             EnemyHealth health)
         {
             EnemyRoot = enemyRoot;
             EnemyData = enemyData;
             TargetTracker = targetTracker;
-            Motor = motor;
+            MovementAgent = movementAgent;
             WeaponController = weaponController;
             Health = health;
         }
@@ -23,7 +23,8 @@ namespace Bitbox.Splashguard.Enemies
         public GameObject EnemyRoot { get; }
         public EnemyVesselData EnemyData { get; }
         public EnemyTargetTracker TargetTracker { get; }
-        public EnemyVesselMotor Motor { get; }
+        public IEnemyMovementAgent MovementAgent { get; }
+        public EnemyVesselMotor Motor => MovementAgent as EnemyVesselMotor;
         public EnemyVesselWeaponController WeaponController { get; }
         public EnemyHealth Health { get; }
     }

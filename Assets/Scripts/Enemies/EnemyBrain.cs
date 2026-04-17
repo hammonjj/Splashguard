@@ -1,6 +1,7 @@
 using System;
 using BitBox.Library;
 using BitBox.Library.Eventing.GlobalEvents;
+using BitBox.Toymageddon.Debugging;
 using UnityEngine;
 
 namespace Bitbox.Splashguard.Enemies
@@ -19,7 +20,9 @@ namespace Bitbox.Splashguard.Enemies
         private EnemyVesselWeaponController _weaponController;
         private EnemyHealth _health;
         private float _nextEvaluationTime;
+        private float _nextDiagnosticTime;
         private bool _isPaused;
+        private bool _debugFrozenApplied;
 
         public EnemyVesselData EnemyData => _enemyData;
         public EnemyBrainConfig BrainConfig => _brainConfig;
@@ -30,6 +33,14 @@ namespace Bitbox.Splashguard.Enemies
             CacheReferences();
             BindActions();
             _globalMessageBus?.Subscribe<PauseGameEvent>(OnPauseGame);
+            LogInfo(
+                $"Enemy brain enabled. root={ResolveOwnerRoot().name}, data={_enemyData?.name ?? "None"}, actions={_actions.Length}, targetTracker={DescribeObject(_targetTracker)}, movement={DescribeObject(_motor)}, weapons={DescribeObject(_weaponController)}, health={DescribeObject(_health)}.");
+            if (DebugContext.EnemiesFrozen)
+            {
+                ApplyDebugFrozenMode();
+                return;
+            }
+
             EvaluateActions(forceSwitch: true);
         }
 
@@ -44,7 +55,21 @@ namespace Bitbox.Splashguard.Enemies
         {
             if (_isPaused || _enemyData == null)
             {
+                LogBrainDiagnostic(_enemyData == null ? "Enemy brain has no EnemyVesselData assigned." : "Enemy brain is paused.");
                 return;
+            }
+
+            if (DebugContext.EnemiesFrozen)
+            {
+                ApplyDebugFrozenMode();
+                return;
+            }
+
+            if (_debugFrozenApplied)
+            {
+                _debugFrozenApplied = false;
+                _nextEvaluationTime = 0f;
+                LogInfo("Enemy brain resumed from debug frozen mode.");
             }
 
             if (Time.time >= _nextEvaluationTime)
@@ -111,8 +136,13 @@ namespace Bitbox.Splashguard.Enemies
             {
                 if (_currentAction != null)
                 {
+                    LogInfo($"Enemy brain exiting action {_currentAction.GetType().Name}; no action scored above zero.");
                     _currentAction.Exit();
                     _currentAction = null;
+                }
+                else
+                {
+                    LogBrainDiagnostic("Enemy brain has no runnable action. Check enabled actions and target tracker state.");
                 }
 
                 return;
@@ -140,6 +170,22 @@ namespace Bitbox.Splashguard.Enemies
             SwitchTo(bestAction);
         }
 
+        private void ApplyDebugFrozenMode()
+        {
+            if (_debugFrozenApplied)
+            {
+                return;
+            }
+
+            _currentAction?.Exit();
+            _currentAction = null;
+            _weaponController?.ClearTarget();
+            _targetTracker?.ClearTarget();
+            _motor?.Stop("debug_frozen_enemies");
+            _debugFrozenApplied = true;
+            LogInfo("Enemy brain entered debug frozen mode.");
+        }
+
         private void SwitchTo(EnemyActionBase nextAction)
         {
             if (nextAction == _currentAction)
@@ -149,6 +195,8 @@ namespace Bitbox.Splashguard.Enemies
 
             _currentAction?.Exit();
             _currentAction = nextAction;
+            LogInfo(
+                $"Enemy brain switching action. next={nextAction.GetType().Name}, status={nextAction.DebugStatus}, hasTarget={_targetTracker != null && _targetTracker.HasTarget}, movementState={_motor?.CurrentStatus.State.ToString() ?? "None"}.");
             _currentAction.Enter();
         }
 
@@ -165,12 +213,32 @@ namespace Bitbox.Splashguard.Enemies
         private void OnPauseGame(PauseGameEvent @event)
         {
             _isPaused = @event.IsPaused;
+            LogInfo($"Enemy brain pause changed. paused={_isPaused}.");
         }
 
         private GameObject ResolveOwnerRoot()
         {
             Rigidbody rootBody = GetComponentInParent<Rigidbody>();
             return rootBody != null ? rootBody.gameObject : gameObject;
+        }
+
+        private void LogBrainDiagnostic(string message)
+        {
+            float interval = ResolveReevaluationInterval() * 10f;
+            float now = Time.time;
+            if (now < _nextDiagnosticTime)
+            {
+                return;
+            }
+
+            _nextDiagnosticTime = now + Mathf.Max(1f, interval);
+            LogWarning(
+                $"{message} currentAction={_currentAction?.GetType().Name ?? "None"}, actions={_actions.Length}, targetTracker={DescribeObject(_targetTracker)}, movement={DescribeObject(_motor)}.");
+        }
+
+        private static string DescribeObject(UnityEngine.Object value)
+        {
+            return value != null ? value.name : "None";
         }
     }
 }

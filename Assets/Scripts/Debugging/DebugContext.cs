@@ -12,11 +12,19 @@ using UnityEditor;
 
 namespace BitBox.Toymageddon.Debugging
 {
+    public enum DebugEnemyMode
+    {
+        Normal = 0,
+        Passive = 1,
+        Frozen = 2
+    }
+
     public static class DebugContext
     {
         private const string DebugStartModeKey = "Debug.StartMode";
         private const string DebugPlayerInvincibleKey = "Debug.PlayerInvincible";
         private const string DebugInfiniteAmmoKey = "Debug.InfiniteAmmo";
+        private const string DebugEnemyModeKey = "Debug.EnemyMode";
         private const string DebugRequestedWeaponTypeKey = "Debug.RequestedWeaponType";
         private const string DebugLaunchTargetKey = "Debug.LaunchTarget";
         private const string DebugLaunchInputControlSchemeKey = "Debug.LaunchInputControlScheme";
@@ -26,6 +34,7 @@ namespace BitBox.Toymageddon.Debugging
         private static StartUpMode _requestedStartMode = StartUpMode.TitleMenu;
         private static bool _playerInvincible;
         private static bool _infiniteAmmo;
+        private static DebugEnemyMode _enemyMode = DebugEnemyMode.Normal;
         private static DebugWeaponType _requestedWeaponType = DebugWeaponType.GatlingGun;
         private static string _requestedLanguageId = LocalizationTable.EnglishLanguageId;
         private static MacroSceneType _pendingDebugLaunchTarget = MacroSceneType.None;
@@ -99,6 +108,37 @@ namespace BitBox.Toymageddon.Debugging
 #endif
             }
         }
+
+        public static DebugEnemyMode EnemyMode
+        {
+            get
+            {
+#if UNITY_EDITOR
+                if (EditorPrefs.HasKey(DebugEnemyModeKey))
+                {
+                    string saved = EditorPrefs.GetString(DebugEnemyModeKey);
+                    if (System.Enum.TryParse(saved, out DebugEnemyMode parsed))
+                    {
+                        _enemyMode = parsed;
+                    }
+                }
+#endif
+                return _enemyMode;
+            }
+            set
+            {
+                _enemyMode = value;
+#if UNITY_EDITOR
+                EditorPrefs.SetString(DebugEnemyModeKey, value.ToString());
+#endif
+            }
+        }
+
+        public static bool EnemiesPassive =>
+            EnemyMode == DebugEnemyMode.Passive || EnemyMode == DebugEnemyMode.Frozen;
+
+        public static bool EnemiesFrozen =>
+            EnemyMode == DebugEnemyMode.Frozen;
 
         public static DebugWeaponType RequestedWeaponType
         {
@@ -270,6 +310,7 @@ namespace BitBox.Toymageddon.Debugging
             _requestedStartMode = StartUpMode.TitleMenu;
             _playerInvincible = false;
             _infiniteAmmo = false;
+            _enemyMode = DebugEnemyMode.Normal;
             _requestedWeaponType = DebugWeaponType.GatlingGun;
             _requestedLanguageId = LocalizationTable.EnglishLanguageId;
             ClearPendingDebugLaunchRequest();
@@ -279,6 +320,7 @@ namespace BitBox.Toymageddon.Debugging
             EditorPrefs.DeleteKey(DebugStartModeKey);
             EditorPrefs.DeleteKey(DebugPlayerInvincibleKey);
             EditorPrefs.DeleteKey(DebugInfiniteAmmoKey);
+            EditorPrefs.DeleteKey(DebugEnemyModeKey);
             EditorPrefs.DeleteKey(DebugRequestedWeaponTypeKey);
 #endif
 

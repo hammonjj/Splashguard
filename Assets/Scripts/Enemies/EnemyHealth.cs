@@ -1,5 +1,6 @@
 using BitBox.Library;
 using BitBox.Library.Eventing.WeaponEvents;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Bitbox.Splashguard.Enemies
@@ -7,16 +8,18 @@ namespace Bitbox.Splashguard.Enemies
     [DisallowMultipleComponent]
     public sealed class EnemyHealth : MonoBehaviourBase
     {
-        [SerializeField] private EnemyVesselData _enemyData;
+        [SerializeField, InlineEditor] private EnemyVesselData _enemyData;
         [SerializeField] private EnemyTargetTracker _targetTracker;
         [SerializeField] private GameObject _enemyRoot;
+        [SerializeField] private EnemyHealthWorldDisplay _worldDisplay;
 
         private EnemyBrain _brain;
-        private float _currentHealth;
+        [ShowInInspector, ReadOnly] private float _currentHealth;
         private bool _isDead;
 
         public float CurrentHealth => _currentHealth;
         public bool IsDead => _isDead;
+        public EnemyHealthWorldDisplay WorldDisplay => _worldDisplay;
 
         protected override void OnEnabled()
         {
@@ -33,7 +36,9 @@ namespace Bitbox.Splashguard.Enemies
         public void ResetHealth()
         {
             _isDead = false;
-            _currentHealth = ResolveMaxHealth();
+            float maxHealth = ResolveMaxHealth();
+            _currentHealth = maxHealth;
+            _worldDisplay?.Initialize(_currentHealth, maxHealth);
         }
 
         public bool TryApplyProjectileImpact(ProjectileImpactEvent impact)
@@ -48,11 +53,16 @@ namespace Bitbox.Splashguard.Enemies
             }
 
             PlayerVesselTarget.TryFindNearest(ResolveEnemyRoot().transform.position, float.PositiveInfinity, out PlayerVesselTarget target);
-            ApplyDamage(impact.Damage, impact.PlayerIndex, target, "hit");
+            ApplyDamage(impact.Damage, impact.PlayerIndex, target, "hit", impact.Point);
             return true;
         }
 
-        public void ApplyDamage(float damage, int sourcePlayerIndex, PlayerVesselTarget sourceTarget, string reason)
+        public void ApplyDamage(
+            float damage,
+            int sourcePlayerIndex,
+            PlayerVesselTarget sourceTarget,
+            string reason,
+            Vector3? damageTextPosition = null)
         {
             if (_isDead || damage <= 0f)
             {
@@ -62,6 +72,7 @@ namespace Bitbox.Splashguard.Enemies
             float maxHealth = ResolveMaxHealth();
             _currentHealth = Mathf.Max(0f, _currentHealth - damage);
             GameObject enemyRoot = ResolveEnemyRoot();
+            _worldDisplay?.ShowDamage(_currentHealth, maxHealth, damage, damageTextPosition);
             _globalMessageBus?.Publish(new EnemyDamagedEvent(enemyRoot, _currentHealth, maxHealth, damage, sourcePlayerIndex));
 
             if (sourceTarget != null && _targetTracker != null)
@@ -75,6 +86,7 @@ namespace Bitbox.Splashguard.Enemies
             }
 
             _isDead = true;
+            _worldDisplay?.HandleDeath(_currentHealth, maxHealth);
             _globalMessageBus?.Publish(new EnemyDeathEvent(enemyRoot));
         }
 
@@ -92,6 +104,7 @@ namespace Bitbox.Splashguard.Enemies
             _targetTracker ??= GetComponent<EnemyTargetTracker>()
                 ?? GetComponentInParent<EnemyTargetTracker>()
                 ?? enemyRoot.GetComponentInChildren<EnemyTargetTracker>(includeInactive: true);
+            _worldDisplay ??= GetComponentInChildren<EnemyHealthWorldDisplay>(includeInactive: true);
         }
 
         private float ResolveMaxHealth()

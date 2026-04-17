@@ -1,4 +1,6 @@
 using BitBox.Library;
+using BitBox.Toymageddon.Debugging;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Bitbox.Splashguard.Enemies
@@ -6,12 +8,12 @@ namespace Bitbox.Splashguard.Enemies
     [DisallowMultipleComponent]
     public sealed class EnemyVesselWeaponController : MonoBehaviourBase
     {
-        [SerializeField] private EnemyVesselData _enemyData;
+        [SerializeField, InlineEditor] private EnemyVesselData _enemyData;
         [SerializeField] private EnemyTargetTracker _targetTracker;
-        [SerializeField] private GameObject _ownerRoot;
         [SerializeField] private EnemyProjectileWeaponMount[] _weaponMounts;
-        [SerializeField, Min(0.05f)] private float _targetGizmoRadius = 0.75f;
+        [SerializeField, Min(0.05f)] private float _targetGizmoRadius = 0.5f;
 
+        private Rigidbody _rigidBody;
         private EnemyBrain _brain;
         private PlayerVesselTarget _explicitTarget;
 
@@ -23,6 +25,17 @@ namespace Bitbox.Splashguard.Enemies
 
         protected override void OnUpdated()
         {
+            if (_weaponMounts == null || _weaponMounts.Length == 0)
+            {
+                return;
+            }
+
+            if (DebugContext.EnemiesPassive)
+            {
+                ResetMountBursts();
+                return;
+            }
+
             PlayerVesselTarget target = ResolveTarget();
             if (target == null)
             {
@@ -68,6 +81,16 @@ namespace Bitbox.Splashguard.Enemies
         public void ClearTarget()
         {
             _explicitTarget = null;
+            ResetMountBursts();
+        }
+
+        private void ResetMountBursts()
+        {
+            if (_weaponMounts == null)
+            {
+                return;
+            }
+
             for (int i = 0; i < _weaponMounts.Length; i++)
             {
                 _weaponMounts[i]?.ResetBurst();
@@ -76,20 +99,56 @@ namespace Bitbox.Splashguard.Enemies
 
         private void CacheReferences()
         {
-            _brain ??= GetComponent<EnemyBrain>() ?? GetComponentInParent<EnemyBrain>();
-            _targetTracker ??= GetComponent<EnemyTargetTracker>() ?? GetComponentInParent<EnemyTargetTracker>();
+            if (_brain == null)
+            {
+                _brain = GetComponent<EnemyBrain>() ?? GetComponentInParent<EnemyBrain>();
+            }
+
+            if (_targetTracker == null)
+            {
+                _targetTracker = GetComponent<EnemyTargetTracker>() ?? GetComponentInParent<EnemyTargetTracker>();
+            }
+
+            if (_rigidBody == null)
+            {
+                _rigidBody = ResolveRootRigidbody();
+            }
+
+            if (_rigidBody == null)
+            {
+                LogError(
+                    $"Enemy weapon controller could not resolve a parent Rigidbody. object={name}, root={transform.root?.name ?? "None"}.");
+                enabled = false;
+                return;
+            }
+
             if (_weaponMounts == null || _weaponMounts.Length == 0)
             {
-                _weaponMounts = ResolveOwnerRoot().GetComponentsInChildren<EnemyProjectileWeaponMount>(includeInactive: true);
+                _weaponMounts = _rigidBody.gameObject.GetComponentsInChildren<EnemyProjectileWeaponMount>(includeInactive: true);
             }
         }
 
         private void ConfigureMounts()
         {
+            if (_rigidBody == null)
+            {
+                return;
+            }
+
             EnemyVesselData data = ResolveData();
+            if (_weaponMounts == null || _weaponMounts.Length == 0)
+            {
+                LogWarning(
+                    $"Enemy weapon controller has no weapon mounts. owner={_rigidBody.gameObject.name}, controller={name}.");
+                return;
+            }
+
+            LogInfo(
+                $"Enemy weapon controller configured. owner={_rigidBody.gameObject.name}, mounts={_weaponMounts.Length}, data={data?.name ?? "None"}.");
+
             for (int i = 0; i < _weaponMounts.Length; i++)
             {
-                _weaponMounts[i]?.Configure(ResolveOwnerRoot(), data, _globalMessageBus);
+                _weaponMounts[i]?.Configure(_rigidBody.gameObject, data, _globalMessageBus);
             }
         }
 
@@ -110,15 +169,19 @@ namespace Bitbox.Splashguard.Enemies
             return _enemyData != null ? _enemyData : _brain != null ? _brain.EnemyData : null;
         }
 
-        private GameObject ResolveOwnerRoot()
+        private Rigidbody ResolveRootRigidbody()
         {
-            if (_ownerRoot != null)
+            Rigidbody[] parentRigidbodies = GetComponentsInParent<Rigidbody>(includeInactive: true);
+            for (int i = 0; i < parentRigidbodies.Length; i++)
             {
-                return _ownerRoot;
+                Rigidbody candidate = parentRigidbodies[i];
+                if (candidate != null)
+                {
+                    return candidate;
+                }
             }
 
-            Rigidbody rootBody = GetComponentInParent<Rigidbody>();
-            return rootBody != null ? rootBody.gameObject : gameObject;
+            return null;
         }
     }
 }

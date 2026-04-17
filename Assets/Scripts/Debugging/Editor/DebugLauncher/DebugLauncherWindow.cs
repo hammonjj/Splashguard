@@ -18,7 +18,7 @@ namespace Bitbox.Toymageddon.Debugging.Editor.DebugLauncher
         {
             var window = GetWindow<DebugLauncherWindow>();
             window.titleContent = new GUIContent("Debug Launcher");
-            window.minSize = new Vector2(320f, 190f);
+            window.minSize = new Vector2(320f, 230f);
             window.Show();
         }
 
@@ -32,6 +32,8 @@ namespace Bitbox.Toymageddon.Debugging.Editor.DebugLauncher
             DrawWeaponSelector();
             EditorGUILayout.Space(4f);
             DrawInfiniteAmmoToggle();
+            EditorGUILayout.Space(4f);
+            DrawEnemyModeToggles();
             GUILayout.FlexibleSpace();
             DrawLaunchButton(hasValidInputSelection);
             EditorGUILayout.Space(12f);
@@ -127,6 +129,26 @@ namespace Bitbox.Toymageddon.Debugging.Editor.DebugLauncher
             {
                 DebugContext.InfiniteAmmo = infiniteAmmo;
             }
+        }
+
+        private static void DrawEnemyModeToggles()
+        {
+            bool passive = DebugContext.EnemiesPassive;
+            bool frozen = DebugContext.EnemiesFrozen;
+
+            EditorGUI.BeginChangeCheck();
+            passive = EditorGUILayout.Toggle("Enemies Passive", passive);
+            frozen = EditorGUILayout.Toggle("Frozen Enemies", frozen);
+            if (!EditorGUI.EndChangeCheck())
+            {
+                return;
+            }
+
+            DebugContext.EnemyMode = frozen
+                ? DebugEnemyMode.Frozen
+                : passive
+                    ? DebugEnemyMode.Passive
+                    : DebugEnemyMode.Normal;
         }
 
         private static void DrawLaunchButton(bool hasValidInputSelection)

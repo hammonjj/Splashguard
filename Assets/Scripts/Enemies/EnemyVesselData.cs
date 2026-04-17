@@ -20,6 +20,7 @@ namespace Bitbox.Splashguard.Enemies
         [SerializeField, Min(0f)] private float _patrolRepathSecondsMax = 14f;
         [SerializeField, Min(1)] private int _patrolCandidateAttempts = 12;
         [SerializeField] private int _patrolSeed = 1337;
+        [SerializeField, Min(0f)] private float _patrolLingerSeconds = 0f;
 
         [Header("Engagement")]
         [SerializeField, Min(0f)] private float _attackRange = 70f;
@@ -29,16 +30,22 @@ namespace Bitbox.Splashguard.Enemies
         [SerializeField, Range(0f, 180f)] private float _orbitStepDegrees = 65f;
 
         [Header("Movement")]
-        [SerializeField, Min(0.1f)] private float _maxForwardSpeed = 10.5f;
-        [SerializeField, Min(0.1f)] private float _speedResponse = 1.8f;
-        [SerializeField, Min(0.1f)] private float _driveAcceleration = 7f;
-        [SerializeField, Min(0.1f)] private float _driveDeceleration = 8f;
-        [SerializeField, Min(0.1f)] private float _steeringTorque = 4f;
+        [SerializeField, Min(0.1f)] private float _maxForwardSpeed = 13f;
+        [SerializeField, Min(0.1f)] private float _speedResponse = 2.25f;
+        [SerializeField, Min(0.1f)] private float _driveAcceleration = 9.5f;
+        [SerializeField, Min(0.1f)] private float _driveDeceleration = 10f;
+        [SerializeField, Min(0.1f)] private float _steeringTorque = 7f;
         [SerializeField, Min(0.1f)] private float _steeringDamping = 2.25f;
         [SerializeField, Min(0.1f)] private float _steeringAuthoritySpeed = 4f;
         [SerializeField, Range(1f, 180f)] private float _fullSteerAngleDegrees = 70f;
         [SerializeField, Range(0f, 180f)] private float _slowTurnAngleDegrees = 45f;
-        [SerializeField, Range(0f, 1f)] private float _slowTurnThrottle = 0.65f;
+        [SerializeField, Range(0f, 1f)] private float _slowTurnThrottle = 0.45f;
+        [SerializeField, Range(0f, 1f)] private float _minimumCruiseThrottle = 0.28f;
+        [SerializeField, Min(0.1f)] private float _arrivalSlowdownDistance = 12f;
+        [SerializeField, Min(0f)] private float _destinationProjectionSearchRadius = 28f;
+        [SerializeField, Min(1)] private int _destinationProjectionRings = 4;
+        [SerializeField, Min(4)] private int _destinationProjectionSamplesPerRing = 12;
+        [SerializeField, Min(0.1f)] private float _movementDiagnosticInterval = 1.5f;
 
         [Header("Terrain Avoidance")]
         [SerializeField, Min(0.1f)] private float _terrainProbeForwardDistance = 4f;
@@ -46,6 +53,9 @@ namespace Bitbox.Splashguard.Enemies
         [SerializeField, Min(0.1f)] private float _terrainProbeDepth = 6f;
         [SerializeField, Min(0f)] private float _terrainClearance = 0.15f;
         [SerializeField, Min(0.1f)] private float _terrainBrakeAcceleration = 10f;
+        [SerializeField, Range(1f, 85f)] private float _terrainProbeFanAngleDegrees = 35f;
+        [SerializeField, Range(0f, 1f)] private float _emergencyReverseThrottle = 0.32f;
+        [SerializeField, Range(0f, 2f)] private float _avoidanceSteeringWeight = 0.85f;
 
         [Header("Weapons")]
         [SerializeField, Min(1)] private int _burstShots = 5;
@@ -63,6 +73,7 @@ namespace Bitbox.Splashguard.Enemies
         public float PatrolRepathSecondsMax => Mathf.Max(PatrolRepathSecondsMin, _patrolRepathSecondsMax);
         public int PatrolCandidateAttempts => Mathf.Max(1, _patrolCandidateAttempts);
         public int PatrolSeed => _patrolSeed;
+        public float PatrolLingerSeconds => Mathf.Max(0f, _patrolLingerSeconds);
         public float AttackRange => Mathf.Max(0f, _attackRange);
         public float IdealStandoffDistance => Mathf.Max(0f, _idealStandoffDistance);
         public float RetreatDistance => Mathf.Max(0f, _retreatDistance);
@@ -78,11 +89,20 @@ namespace Bitbox.Splashguard.Enemies
         public float FullSteerAngleDegrees => Mathf.Clamp(_fullSteerAngleDegrees, 1f, 180f);
         public float SlowTurnAngleDegrees => Mathf.Clamp(_slowTurnAngleDegrees, 0f, 180f);
         public float SlowTurnThrottle => Mathf.Clamp01(_slowTurnThrottle);
+        public float MinimumCruiseThrottle => Mathf.Clamp01(_minimumCruiseThrottle);
+        public float ArrivalSlowdownDistance => Mathf.Max(0.1f, _arrivalSlowdownDistance);
+        public float DestinationProjectionSearchRadius => Mathf.Max(0f, _destinationProjectionSearchRadius);
+        public int DestinationProjectionRings => Mathf.Max(1, _destinationProjectionRings);
+        public int DestinationProjectionSamplesPerRing => Mathf.Max(4, _destinationProjectionSamplesPerRing);
+        public float MovementDiagnosticInterval => Mathf.Max(0.1f, _movementDiagnosticInterval);
         public float TerrainProbeForwardDistance => Mathf.Max(0.1f, _terrainProbeForwardDistance);
         public float TerrainProbeHeight => Mathf.Max(0.1f, _terrainProbeHeight);
         public float TerrainProbeDepth => Mathf.Max(0.1f, _terrainProbeDepth);
         public float TerrainClearance => Mathf.Max(0f, _terrainClearance);
         public float TerrainBrakeAcceleration => Mathf.Max(0.1f, _terrainBrakeAcceleration);
+        public float TerrainProbeFanAngleDegrees => Mathf.Clamp(_terrainProbeFanAngleDegrees, 1f, 85f);
+        public float EmergencyReverseThrottle => Mathf.Clamp01(_emergencyReverseThrottle);
+        public float AvoidanceSteeringWeight => Mathf.Clamp(_avoidanceSteeringWeight, 0f, 2f);
         public int BurstShots => Mathf.Max(1, _burstShots);
         public float BurstCooldownSeconds => Mathf.Max(0f, _burstCooldownSeconds);
         public float WeaponArcHalfAngleDegrees => Mathf.Clamp(_weaponArcHalfAngleDegrees, 1f, 180f);
@@ -103,6 +123,11 @@ namespace Bitbox.Splashguard.Enemies
             if (_idealStandoffDistance > _attackRange)
             {
                 _idealStandoffDistance = _attackRange;
+            }
+
+            if (_minimumCruiseThrottle > _slowTurnThrottle)
+            {
+                _minimumCruiseThrottle = _slowTurnThrottle;
             }
         }
     }
