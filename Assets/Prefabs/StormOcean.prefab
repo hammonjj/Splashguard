@@ -1658,7 +1658,7 @@ VisualEffect:
       - m_Value: {x: 0.06857421, y: 0.14962603, z: 0.21698111, w: 1}
         m_Name: waterColor
         m_Overridden: 1
-      - m_Value: {x: 1, y: 0.97843134, z: 0.9196079, w: 1}
+      - m_Value: {x: 0.5, y: 0.5, z: 0.5, w: 1}
         m_Name: _totalLigthColor
         m_Overridden: 1
       - m_Value: {x: 0.03, y: 0.25, z: 0.43, w: 1}

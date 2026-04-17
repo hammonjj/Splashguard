@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0496362f6c69848509b7737d716737b6, type: 3}
+  m_Name: EnemyVesselData
+  m_EditorClassIdentifier: Assembly-CSharp::Bitbox.Splashguard.Enemies.EnemyVesselData
+  _maxHealth: 150
+  _detectionRange: 85
+  _alertRadius: 120
+  _patrolRadius: 40
+  _patrolMinimumWaypointDistance: 12
+  _patrolWaypointAcceptanceRadius: 6
+  _patrolRepathSecondsMin: 8
+  _patrolRepathSecondsMax: 14
+  _patrolCandidateAttempts: 12
+  _patrolSeed: 1337
+  _attackRange: 70
+  _idealStandoffDistance: 35
+  _retreatDistance: 22
+  _engagementWaypointAcceptanceRadius: 4.5
+  _orbitStepDegrees: 65
+  _maxForwardSpeed: 10.5
+  _speedResponse: 1.8
+  _driveAcceleration: 7
+  _driveDeceleration: 8
+  _steeringTorque: 4
+  _steeringDamping: 2.25
+  _steeringAuthoritySpeed: 4
+  _fullSteerAngleDegrees: 70
+  _slowTurnAngleDegrees: 45
+  _slowTurnThrottle: 0.65
+  _terrainProbeForwardDistance: 4
+  _terrainProbeHeight: 3
+  _terrainProbeDepth: 6
+  _terrainClearance: 0.15
+  _terrainBrakeAcceleration: 10
+  _burstShots: 5
+  _burstCooldownSeconds: 1.25
+  _weaponArcHalfAngleDegrees: 90
+  _weaponAimDegreesPerSecond: 180

@@ -129,6 +129,7 @@ GameObject:
   - component: {fileID: 786461927247061914}
   - component: {fileID: 1154764316127711442}
   - component: {fileID: 4100000000000000010}
+  - component: {fileID: 6553220054413731913}
   m_Layer: 0
   m_Name: PlayerVessel
   m_TagString: Untagged
@@ -250,6 +251,24 @@ MonoBehaviour:
   wakeWaveOccurrences: 0
   drawForce: 0
   vectorSize: 0.001
+--- !u!114 &6553220054413731913
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 609280513929198775}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6ecca1e2ca0649cdaead2ee2f9df2fd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Bitbox.Splashguard.Enemies.PlayerVesselTarget
+  _rootTransform: {fileID: 1718020709709058276}
+  _aimTransform: {fileID: 1718020709709058276}
+  _useColliderBoundsAimPoint: 1
+  _colliderAimHeightNormalized: 0.45
+  _aimVerticalWorldOffset: 0
+  _aimLocalOffset: {x: 0, y: 0.45, z: 0}
 --- !u!1 &734507119841468892
 GameObject:
   m_ObjectHideFlags: 0
