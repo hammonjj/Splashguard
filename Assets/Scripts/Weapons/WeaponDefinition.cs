@@ -13,6 +13,7 @@ namespace BitBox.Toymageddon.Weapons
         [SerializeField, Required, InlineEditor] private MagazineDefinition _magazine;
         [SerializeField, Required, InlineEditor] private ReloadDefinition _reload;
         [SerializeField, Required, InlineEditor] private AmmoDefinition _ammo;
+        [SerializeField, InlineEditor] private WeaponHeatDefinition _heat;
 
         public DebugWeaponType WeaponType => _weaponType;
         public string DisplayName => string.IsNullOrWhiteSpace(_displayName) ? _weaponType.ToString() : _displayName;
@@ -20,5 +21,6 @@ namespace BitBox.Toymageddon.Weapons
         public MagazineDefinition Magazine => _magazine;
         public ReloadDefinition Reload => _reload;
         public AmmoDefinition Ammo => _ammo;
+        public WeaponHeatDefinition Heat => _heat;
     }
 }

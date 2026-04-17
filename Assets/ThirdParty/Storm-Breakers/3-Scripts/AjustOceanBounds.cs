@@ -1,4 +1,7 @@
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace StormBreakers
 {
@@ -8,8 +11,26 @@ namespace StormBreakers
 
         void OnEnable() // called first
         {
+#if UNITY_EDITOR
+            if (!Application.isPlaying
+                && (EditorUtility.IsPersistent(this)
+                    || EditorUtility.IsPersistent(gameObject)
+                    || PrefabUtility.IsPartOfPrefabAsset(gameObject)))
+            {
+                return;
+            }
+#endif
+
+            if (Ocean.wavelength == null || Ocean.wavelength.Length < 4)
+            {
+                Ocean.ConstructStaticData();
+            }
+
             // getting the mesh of the object
-            Mesh mesh = GetComponent<MeshFilter>().mesh;
+            MeshFilter meshFilter = GetComponent<MeshFilter>();
+            if (meshFilter == null) { return; }
+
+            Mesh mesh = meshFilter.mesh;
             if (mesh == null) { return; }
 
             // calculating the horizontal and vertical extending value, there are the sum of the maximal horizontal deformation of each waves systems

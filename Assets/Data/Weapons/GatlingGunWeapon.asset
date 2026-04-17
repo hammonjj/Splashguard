@@ -18,3 +18,4 @@ MonoBehaviour:
   _magazine: {fileID: 11400000, guid: 44c560d4b711434c96a00ae578f7c4c7, type: 2}
   _reload: {fileID: 11400000, guid: b5de37499feb4a05b06ea1bef8cce125, type: 2}
   _ammo: {fileID: 11400000, guid: d88f135930c34e3eba22a8ed9b4d7e2c, type: 2}
+  _heat: {fileID: 11400000, guid: 8e0ce8c9f4c9492bade8392c09d931f1, type: 2}

@@ -22,6 +22,7 @@ namespace BitBox.Toymageddon.Weapons.Editor
         private const string ReloadPath = WeaponDataDirectory + "/NoReload.asset";
         private const string ProjectilePath = WeaponDataDirectory + "/GatlingBulletProjectile.asset";
         private const string AmmoPath = WeaponDataDirectory + "/GatlingBulletAmmo.asset";
+        private const string HeatPath = WeaponDataDirectory + "/GatlingHeat.asset";
         private const string WeaponPath = WeaponDataDirectory + "/GatlingGunWeapon.asset";
         private static readonly Vector3 VisibleBulletScale = new(0.16f, 0.16f, 0.16f);
 
@@ -36,6 +37,7 @@ namespace BitBox.Toymageddon.Weapons.Editor
             ReloadDefinition reload = CreateOrUpdateAsset<ReloadDefinition>(ReloadPath);
             ProjectileDefinition projectile = CreateOrUpdateAsset<ProjectileDefinition>(ProjectilePath);
             AmmoDefinition ammo = CreateOrUpdateAsset<AmmoDefinition>(AmmoPath);
+            WeaponHeatDefinition heat = CreateOrUpdateAsset<WeaponHeatDefinition>(HeatPath);
             WeaponDefinition weapon = CreateOrUpdateAsset<WeaponDefinition>(WeaponPath);
 
             SetFloat(fireMode, "_roundsPerSecond", 12f);
@@ -58,12 +60,19 @@ namespace BitBox.Toymageddon.Weapons.Editor
             SetInt(ammo, "_damage", 5);
             SetObject(ammo, "_projectile", projectile);
 
+            SetFloat(heat, "_maxHeat", 100f);
+            SetFloat(heat, "_heatPerShot", 1.8f);
+            SetFloat(heat, "_coolRatePerSecond", 15f);
+            SetFloat(heat, "_overheatedCoolRatePerSecond", 25f);
+            SetFloat(heat, "_recoverHeat", 0f);
+
             SetEnum(weapon, "_weaponType", (int)DebugWeaponType.GatlingGun);
             SetString(weapon, "_displayName", "Gatling Gun");
             SetObject(weapon, "_fireMode", fireMode);
             SetObject(weapon, "_magazine", magazine);
             SetObject(weapon, "_reload", reload);
             SetObject(weapon, "_ammo", ammo);
+            SetObject(weapon, "_heat", heat);
 
             WirePlayerVessel(weapon);
 

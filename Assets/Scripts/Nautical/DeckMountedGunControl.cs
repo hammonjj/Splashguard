@@ -632,7 +632,6 @@ namespace Bitbox
         {
             return playerInput.currentActionMap != null
                 && playerInput.currentActionMap.name == Strings.ThirdPersonControls
-                && !AnchorControls.IsPlayerInAnchorControlRange(playerInput)
                 && !HelmControl.TryGetActiveHelm(playerInput.playerIndex, out _);
         }
 

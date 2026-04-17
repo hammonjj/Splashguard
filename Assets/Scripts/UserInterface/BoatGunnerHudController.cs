@@ -1,5 +1,6 @@
 using Bitbox;
 using BitBox.Library;
+using BitBox.Library.Eventing;
 using BitBox.Library.Constants;
 using BitBox.Library.Constants.Enums;
 using BitBox.Library.Eventing.GlobalEvents;
@@ -17,9 +18,13 @@ namespace BitBox.Toymageddon.UserInterface
         private const string HudOutputPath = "UiCanvas/ViewportRoot/GameplayHudRoot/PlayerHudOutput";
         private const string RuntimeRootName = "BoatGunnerHudRuntime";
         private const string AmmoValueName = "AmmoValue";
+        private const string HeatSliderName = "HeatSlider";
+        private const string HeatStatusName = "HeatStatus";
+        private const string HeatFillName = "Fill";
         private const string CrosshairRootName = "CrosshairRoot";
         private const float AmmoPanelWidth = 188f;
-        private const float AmmoPanelHeight = 58f;
+        private const float AmmoPanelHeight = 104f;
+        private const float HeatSliderHeight = 18f;
         private const float CrosshairSize = 36f;
         private const float CrosshairGap = 6f;
         private const float CrosshairArmLength = 11f;
@@ -32,12 +37,17 @@ namespace BitBox.Toymageddon.UserInterface
         private RectTransform _runtimeRoot;
         private RectTransform _crosshairRoot;
         private Text _ammoValueText;
+        private Text _heatStatusText;
+        private Slider _heatSlider;
+        private Image _heatSliderBackground;
+        private Image _heatFillImage;
         private PlayerInput _playerInput;
         private PlayerDataReference _playerData;
         private Font _font;
         private Canvas _canvas;
         private DeckMountedGunControl _activeGun;
         private PlayerWeaponController _activeWeaponController;
+        private MessageBus _activeWeaponBus;
         private MacroSceneType _currentMacroScene = MacroSceneType.None;
         private bool _isPaused;
 
@@ -79,6 +89,7 @@ namespace BitBox.Toymageddon.UserInterface
             _globalMessageBus.Unsubscribe<MacroSceneLoadedEvent>(OnMacroSceneLoaded);
             _globalMessageBus.Unsubscribe<PlayerDiedEvent>(OnPlayerDied);
 
+            BindActiveWeaponBus(null);
             _activeGun = null;
             _activeWeaponController = null;
             SetHudActive(false);
@@ -120,6 +131,7 @@ namespace BitBox.Toymageddon.UserInterface
 
             _activeGun = null;
             _activeWeaponController = null;
+            BindActiveWeaponBus(null);
             RefreshHudVisibility();
             ResetHudState();
         }
@@ -149,6 +161,7 @@ namespace BitBox.Toymageddon.UserInterface
             {
                 _activeGun = null;
                 _activeWeaponController = null;
+                BindActiveWeaponBus(null);
             }
 
             RefreshHudVisibility();
@@ -158,8 +171,19 @@ namespace BitBox.Toymageddon.UserInterface
         {
             _activeGun = null;
             _activeWeaponController = null;
+            BindActiveWeaponBus(null);
             RefreshHudVisibility();
             ResetHudState();
+        }
+
+        private void OnWeaponHeatChanged(WeaponHeatChangedEvent @event)
+        {
+            if (@event == null || !IsLocalPlayerEvent(@event.PlayerIndex))
+            {
+                return;
+            }
+
+            SetHeatSliderState(@event.HeatEnabled, @event.NormalizedHeat, @event.IsOverheated);
         }
 
         private void CacheReferences()
@@ -220,8 +244,11 @@ namespace BitBox.Toymageddon.UserInterface
             ammoTextRect.anchorMin = Vector2.zero;
             ammoTextRect.anchorMax = Vector2.one;
             ammoTextRect.pivot = new Vector2(0.5f, 0.5f);
-            ammoTextRect.anchoredPosition = Vector2.zero;
-            ammoTextRect.sizeDelta = new Vector2(-18f, -6f);
+            ammoTextRect.anchoredPosition = new Vector2(0f, 24f);
+            ammoTextRect.sizeDelta = new Vector2(-18f, -58f);
+
+            _heatStatusText = CreateHeatStatusText(ammoPanelRect);
+            _heatSlider = CreateHeatSlider(ammoPanelRect);
 
             _crosshairRoot = new GameObject(CrosshairRootName, typeof(RectTransform)).GetComponent<RectTransform>();
             _crosshairRoot.SetParent(_runtimeRoot, false);
@@ -243,7 +270,91 @@ namespace BitBox.Toymageddon.UserInterface
         private void BindRuntimeParts()
         {
             _ammoValueText ??= _runtimeRoot.Find($"AmmoPanel/{AmmoValueName}")?.GetComponent<Text>();
+            _heatStatusText ??= _runtimeRoot.Find($"AmmoPanel/{HeatStatusName}")?.GetComponent<Text>();
+            _heatSlider ??= _runtimeRoot.Find($"AmmoPanel/{HeatSliderName}")?.GetComponent<Slider>();
+            _heatSliderBackground ??= _runtimeRoot.Find($"AmmoPanel/{HeatSliderName}")?.GetComponent<Image>();
+            _heatFillImage ??= _runtimeRoot.Find($"AmmoPanel/{HeatSliderName}/Fill Area/{HeatFillName}")?.GetComponent<Image>();
+            RectTransform ammoPanel = _runtimeRoot.Find("AmmoPanel") as RectTransform;
+            if (_heatStatusText == null && ammoPanel != null)
+            {
+                _heatStatusText = CreateHeatStatusText(ammoPanel);
+            }
+
+            if (_heatSlider == null)
+            {
+                if (ammoPanel != null)
+                {
+                    _heatSlider = CreateHeatSlider(ammoPanel);
+                }
+            }
+
             _crosshairRoot ??= _runtimeRoot.Find(CrosshairRootName) as RectTransform;
+        }
+
+        private Text CreateHeatStatusText(RectTransform parent)
+        {
+            Text statusText = CreateText(HeatStatusName, parent, 11, TextAnchor.MiddleCenter, new Color(1f, 0.82f, 0.34f, 0.98f));
+            statusText.text = "OVERHEATED - COOLING";
+            statusText.fontStyle = FontStyle.Bold;
+            statusText.raycastTarget = false;
+
+            RectTransform statusRect = statusText.rectTransform;
+            statusRect.anchorMin = new Vector2(0f, 0f);
+            statusRect.anchorMax = new Vector2(1f, 0f);
+            statusRect.pivot = new Vector2(0.5f, 0f);
+            statusRect.anchoredPosition = new Vector2(0f, 36f);
+            statusRect.sizeDelta = new Vector2(-18f, 16f);
+            statusText.gameObject.SetActive(false);
+            return statusText;
+        }
+
+        private Slider CreateHeatSlider(RectTransform parent)
+        {
+            GameObject sliderObject = new GameObject(HeatSliderName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Slider));
+            sliderObject.transform.SetParent(parent, false);
+
+            RectTransform sliderRect = sliderObject.GetComponent<RectTransform>();
+            sliderRect.anchorMin = new Vector2(0f, 0f);
+            sliderRect.anchorMax = new Vector2(1f, 0f);
+            sliderRect.pivot = new Vector2(0.5f, 0f);
+            sliderRect.anchoredPosition = new Vector2(0f, 8f);
+            sliderRect.sizeDelta = new Vector2(-18f, HeatSliderHeight);
+
+            _heatSliderBackground = sliderObject.GetComponent<Image>();
+            _heatSliderBackground.color = new Color(0.02f, 0.025f, 0.025f, 0.85f);
+            _heatSliderBackground.raycastTarget = false;
+
+            RectTransform fillArea = new GameObject("Fill Area", typeof(RectTransform)).GetComponent<RectTransform>();
+            fillArea.SetParent(sliderRect, false);
+            fillArea.anchorMin = Vector2.zero;
+            fillArea.anchorMax = Vector2.one;
+            fillArea.offsetMin = new Vector2(1f, 1f);
+            fillArea.offsetMax = new Vector2(-1f, -1f);
+
+            GameObject fillObject = new GameObject(HeatFillName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            fillObject.transform.SetParent(fillArea, false);
+            RectTransform fillRect = fillObject.GetComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = Vector2.zero;
+            fillRect.offsetMax = Vector2.zero;
+
+            _heatFillImage = fillObject.GetComponent<Image>();
+            _heatFillImage.color = new Color(0.92f, 0.62f, 0.14f, 0.96f);
+            _heatFillImage.raycastTarget = false;
+
+            Slider slider = sliderObject.GetComponent<Slider>();
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.value = 0f;
+            slider.wholeNumbers = false;
+            slider.interactable = false;
+            slider.transition = Selectable.Transition.None;
+            slider.direction = Slider.Direction.LeftToRight;
+            slider.fillRect = fillRect;
+            slider.targetGraphic = _heatFillImage;
+            sliderObject.SetActive(false);
+            return slider;
         }
 
         private void CreateCrosshairArm(string objectName, Vector2 anchor, Vector2 anchoredPosition, Vector2 size)
@@ -259,20 +370,41 @@ namespace BitBox.Toymageddon.UserInterface
 
         private void RefreshActiveGunReference()
         {
+            DeckMountedGunControl nextGun;
+            PlayerWeaponController nextWeaponController;
+            MessageBus nextWeaponBus;
+
             if (_playerInput == null)
             {
-                _activeGun = null;
-                _activeWeaponController = null;
-                return;
+                nextGun = null;
+                nextWeaponController = null;
+                nextWeaponBus = null;
+            }
+            else
+            {
+                nextGun = DeckMountedGunControl.TryGetActiveGun(_playerInput.playerIndex, out DeckMountedGunControl gun)
+                    ? gun
+                    : null;
+                nextWeaponController = nextGun != null
+                    ? nextGun.GetComponent<PlayerWeaponController>()
+                    : null;
+                nextWeaponBus = nextGun != null
+                    ? nextGun.GetComponent<MessageBus>()
+                    : null;
             }
 
-            _activeGun = DeckMountedGunControl.TryGetActiveGun(_playerInput.playerIndex, out DeckMountedGunControl gun)
-                ? gun
-                : null;
+            bool changed = nextGun != _activeGun
+                || nextWeaponController != _activeWeaponController
+                || nextWeaponBus != _activeWeaponBus;
 
-            _activeWeaponController = _activeGun != null
-                ? _activeGun.GetComponent<PlayerWeaponController>()
-                : null;
+            _activeGun = nextGun;
+            _activeWeaponController = nextWeaponController;
+            BindActiveWeaponBus(nextWeaponBus);
+
+            if (changed)
+            {
+                RequestHeatSnapshot();
+            }
         }
 
         private void RefreshHudVisibility()
@@ -318,6 +450,73 @@ namespace BitBox.Toymageddon.UserInterface
 
             string currentAmmoText = infiniteAmmo ? "\u221e" : Mathf.Max(0, currentAmmo).ToString();
             _ammoValueText.text = $"AMMO {currentAmmoText} / {Mathf.Max(0, clipCapacity)}";
+        }
+
+        private void BindActiveWeaponBus(MessageBus nextBus)
+        {
+            if (_activeWeaponBus == nextBus)
+            {
+                return;
+            }
+
+            if (_activeWeaponBus != null)
+            {
+                _activeWeaponBus.Unsubscribe<WeaponHeatChangedEvent>(OnWeaponHeatChanged);
+            }
+
+            _activeWeaponBus = nextBus;
+            if (_activeWeaponBus != null)
+            {
+                _activeWeaponBus.Subscribe<WeaponHeatChangedEvent>(OnWeaponHeatChanged);
+            }
+            else
+            {
+                SetHeatSliderState(false, 0f, false);
+            }
+        }
+
+        private void RequestHeatSnapshot()
+        {
+            if (_activeWeaponBus == null || _playerInput == null)
+            {
+                SetHeatSliderState(false, 0f, false);
+                return;
+            }
+
+            _activeWeaponBus.Publish(new WeaponHeatSnapshotRequestedEvent(_playerInput.playerIndex));
+        }
+
+        private void SetHeatSliderState(bool heatEnabled, float normalizedHeat, bool isOverheated)
+        {
+            if (_heatSlider == null)
+            {
+                return;
+            }
+
+            _heatSlider.gameObject.SetActive(heatEnabled);
+            _heatSlider.SetValueWithoutNotify(Mathf.Clamp01(normalizedHeat));
+
+            if (_heatStatusText != null)
+            {
+                _heatStatusText.gameObject.SetActive(heatEnabled && isOverheated);
+            }
+
+            if (_heatSliderBackground != null)
+            {
+                Color normalBackground = new(0.02f, 0.025f, 0.025f, 0.85f);
+                Color warningBackground = new(0.2f, 0.018f, 0.012f, 0.96f);
+                _heatSliderBackground.color = isOverheated ? warningBackground : normalBackground;
+            }
+
+            if (_heatFillImage != null)
+            {
+                Color coolColor = new(0.92f, 0.62f, 0.14f, 0.96f);
+                Color hotColor = new(0.95f, 0.12f, 0.04f, 0.98f);
+                Color overheatColor = new(1f, 0.02f, 0.02f, 1f);
+                _heatFillImage.color = isOverheated
+                    ? overheatColor
+                    : Color.Lerp(coolColor, hotColor, Mathf.Clamp01(normalizedHeat));
+            }
         }
 
         private void UpdateCrosshairPosition()
@@ -377,6 +576,7 @@ namespace BitBox.Toymageddon.UserInterface
         private void ResetHudState()
         {
             RefreshAmmoText(0, 0, false);
+            SetHeatSliderState(false, 0f, false);
             if (_crosshairRoot != null)
             {
                 _crosshairRoot.anchoredPosition = Vector2.zero;

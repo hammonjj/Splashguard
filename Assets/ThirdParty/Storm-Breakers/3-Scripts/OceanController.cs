@@ -107,6 +107,14 @@ namespace StormBreakers
 
         private void OnEnable()
         {
+#if UNITY_EDITOR
+            if (!Application.isPlaying && IsPersistentPrefabAsset())
+            {
+                RefreshInspectorReadouts();
+                return;
+            }
+#endif
+
             // ------------- physics ---------------
             Time.fixedDeltaTime = 1f/fixedFrameRate;
             // -------------- static construction ------------
@@ -139,7 +147,7 @@ namespace StormBreakers
             else { Debug.LogError("Please set ocean.mat to the mesh renderer of ocean controller object."); }
 
             // getting the wind controller
-            windController = GameObject.FindObjectOfType<WindController>();
+            windController = Object.FindFirstObjectByType<WindController>();
 
             // updating the wind data and send the message to every object that need an update
             UpdateWind();
@@ -183,7 +191,7 @@ namespace StormBreakers
             // -----------  total light ---------------
             #region
             // getting all the directional light to find the main light
-            Light[] lights = GameObject.FindObjectsOfType<Light>();
+            Light[] lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
 
             if (lights != null)
             {
@@ -253,6 +261,13 @@ namespace StormBreakers
 
         private void Update()
         {
+#if UNITY_EDITOR
+            if (!Application.isPlaying && IsPersistentPrefabAsset())
+            {
+                return;
+            }
+#endif
+
             // -------- positioning the mesh --------------
             // folowing the main camera in game mode
             if (Camera.main == null) { Debug.LogError("Please set the tag 'main camera' to a camera in the scene."); }
@@ -434,17 +449,7 @@ namespace StormBreakers
             // ---------- statics ------------
             #region
             // ambient light initialized to fallback value
-            Color ambientColor = Color.gray;
-
-            // checking the render ambient mode, since getting the color from the skybox doesn't seem to work, it is required to use color or gradient mode
-            if (SceneManager.GetActiveScene().name != "" && RenderSettings.ambientMode == UnityEngine.Rendering.AmbientMode.Skybox)
-            {
-                Debug.LogWarning("Storm Breakers does not support skybox ambient mode. Please set ambient mode to either gradient or color in Lighting window/Environment/Environment Lighting. Default ambient color is set to mid gray.");
-            }
-            else // ambient color is set to the sky color
-            {
-                ambientColor = RenderSettings.ambientLight;
-            }
+            Color ambientColor = ResolveAmbientColor();
 
             // directional light initialized to fallback value
             Color mainLightColor = Color.black;
@@ -485,6 +490,19 @@ namespace StormBreakers
             // trick to refresh scene because there is a bug with material serialization 
             clickHereToRefresh = false;
 
+            RefreshInspectorReadouts();
+
+            if (!isActiveAndEnabled || IsPersistentPrefabAsset())
+            {
+                return;
+            }
+
+            // initializing everything
+            OnEnable();
+        }
+
+        private void RefreshInspectorReadouts()
+        {
             // checking the ordering of the wave length
             //if (wavelength1 > wavelength0) { wavelength1 = wavelength0; }
             //if (wavelength2 > wavelength1) { wavelength2 = wavelength1; }
@@ -499,11 +517,37 @@ namespace StormBreakers
             // indicating the wave height in m and the period in seconds
             swellHeightRef = waveHeight0 + "m";
             swellPeriodRef = Mathf.Round(Mathf.Sqrt(2f*Mathf.PI*wavelength0/9.81f)) + "s";
+        }
 
-            // initializing everything
-            OnEnable();
+        private bool IsPersistentPrefabAsset()
+        {
+            return EditorUtility.IsPersistent(this)
+                || EditorUtility.IsPersistent(gameObject)
+                || PrefabUtility.IsPartOfPrefabAsset(gameObject);
         }
 #endif
+
+        private static Color ResolveAmbientColor()
+        {
+            if (SceneManager.GetActiveScene().name != ""
+                && RenderSettings.ambientMode == UnityEngine.Rendering.AmbientMode.Skybox)
+            {
+                Color skyboxApproximation =
+                    RenderSettings.ambientSkyColor * 0.5f
+                    + RenderSettings.ambientEquatorColor * 0.35f
+                    + RenderSettings.ambientGroundColor * 0.15f;
+
+                if (skyboxApproximation.maxColorComponent > 0f)
+                {
+                    return skyboxApproximation;
+                }
+
+                Color fallbackAmbient = RenderSettings.ambientLight;
+                return fallbackAmbient.maxColorComponent > 0f ? fallbackAmbient : Color.gray;
+            }
+
+            return RenderSettings.ambientLight;
+        }
     }
 
 }

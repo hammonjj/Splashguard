@@ -3,7 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Bitbox;
+using BitBox.Library;
 using BitBox.Library.Constants;
+using BitBox.Library.Eventing;
 using NUnit.Framework;
 using NUnitAssert = NUnit.Framework.Assert;
 using UnityEditor;
@@ -256,6 +258,45 @@ namespace BitBox.Toymageddon.Tests.Editor
         }
 
         [Test]
+        public void AnchorRange_DoesNotBlockDeckGunTakeoverForSamePlayer()
+        {
+            AnchorControls anchorControls = InstantiateConfiguredAnchorControls(out GameObject playerVessel);
+            PlayerInput playerInput = CreatePlayerInput(Strings.ThirdPersonControls, out InputActionAsset inputActions);
+            var playerCollider = playerInput.gameObject.AddComponent<BoxCollider>();
+
+            try
+            {
+                NUnitAssert.IsNotNull(
+                    playerInput.currentActionMap,
+                    "Test player should have an active third-person action map.");
+                NUnitAssert.AreEqual(Strings.ThirdPersonControls, playerInput.currentActionMap.name);
+
+                Collider interactionTrigger = GetPrivateField<Collider>(anchorControls, "_interactionTrigger");
+                PlacePlayerColliderAt(playerCollider, interactionTrigger.bounds.center);
+
+                InvokePrivate(anchorControls, "OnTriggerEntered", playerCollider);
+                NUnitAssert.IsTrue(
+                    AnchorControls.IsPlayerInAnchorControlRange(playerInput),
+                    "AnchorControls should register players inside its interaction trigger.");
+
+                bool canTakeGun = InvokePrivateStatic<bool>(
+                    typeof(DeckMountedGunControl),
+                    "CanPlayerTakeGun",
+                    playerInput);
+                NUnitAssert.IsTrue(
+                    canTakeGun,
+                    "Anchor range alone should not prevent a player from taking a deck gun with its own interaction trigger.");
+            }
+            finally
+            {
+                InvokePrivate(anchorControls, "OnTriggerExited", playerCollider);
+                UnityEngine.Object.DestroyImmediate(playerInput.gameObject);
+                UnityEngine.Object.DestroyImmediate(inputActions);
+                UnityEngine.Object.DestroyImmediate(playerVessel);
+            }
+        }
+
+        [Test]
         public void PlayerVesselHelmControl_UsesHelmInteractionTrigger()
         {
             var playerVessel = LoadRequiredPrefab(PlayerVesselPrefabPath);
@@ -307,6 +348,48 @@ namespace BitBox.Toymageddon.Tests.Editor
                 NUnitAssert.IsTrue(
                     overlappingPlayers.ContainsKey(playerInput),
                     "HelmControl should register players that actually overlap the helm trigger.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(playerInput.gameObject);
+                UnityEngine.Object.DestroyImmediate(inputActions);
+                UnityEngine.Object.DestroyImmediate(playerVessel);
+            }
+        }
+
+        [Test]
+        public void HelmRelease_RestoresThirdPersonControlsEvenWithThrottleSet()
+        {
+            using TestMessageBusScope busScope = new();
+            var prefab = LoadRequiredPrefab(PlayerVesselPrefabPath);
+            var playerVessel = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
+            PlayerInput playerInput = CreatePlayerInput(Strings.ThirdPersonControls, out InputActionAsset inputActions);
+
+            try
+            {
+                NUnitAssert.IsNotNull(playerVessel, "Expected to instantiate PlayerVessel prefab.");
+                var helmControl = playerVessel.GetComponent<HelmControl>();
+                NUnitAssert.IsNotNull(helmControl, "PlayerVessel should own HelmControl.");
+                InvokePrivate(helmControl, "CacheReferences");
+
+                InvokePrivate(helmControl, "AssumeControl", playerInput);
+                NUnitAssert.IsNotNull(playerInput.currentActionMap);
+                NUnitAssert.AreEqual(
+                    Strings.NavalNavigation,
+                    playerInput.currentActionMap.name,
+                    "Taking the helm should place the player in the naval input map without relying on scene listeners.");
+
+                SetPrivateField(helmControl, "_throttleSetting", 0.65f);
+                InvokePrivate(helmControl, "ReleaseControl", false, "test_release");
+
+                NUnitAssert.IsNotNull(playerInput.currentActionMap);
+                NUnitAssert.AreEqual(
+                    Strings.ThirdPersonControls,
+                    playerInput.currentActionMap.name,
+                    "Releasing the helm should fully return the player to normal interaction controls, even if the boat is still moving.");
+                NUnitAssert.IsFalse(
+                    HelmControl.TryGetActiveHelm(playerInput.playerIndex, out _),
+                    "Releasing the helm should clear the active station lookup for the player.");
             }
             finally
             {
@@ -434,7 +517,11 @@ namespace BitBox.Toymageddon.Tests.Editor
             var playerInput = playerObject.AddComponent<PlayerInput>();
             inputActions = ScriptableObject.CreateInstance<InputActionAsset>();
             inputActions.AddActionMap(Strings.ThirdPersonControls).AddAction(Strings.ActionAction);
-            inputActions.AddActionMap(Strings.NavalNavigation).AddAction(Strings.ActionAction);
+            InputActionMap navalNavigationMap = inputActions.AddActionMap(Strings.NavalNavigation);
+            navalNavigationMap.AddAction(Strings.ActionAction);
+            navalNavigationMap.AddAction(Strings.ThrottleAction);
+            navalNavigationMap.AddAction(Strings.SteeringAction);
+            navalNavigationMap.AddAction(Strings.KillThrottleAction);
             inputActions.AddActionMap(Strings.BoatGunner).AddAction(Strings.ActionAction);
 
             playerInput.actions = inputActions;
@@ -507,9 +594,38 @@ namespace BitBox.Toymageddon.Tests.Editor
             return (T)fieldInfo.GetValue(target);
         }
 
+        private static void SetPrivateField(object target, string fieldName, object value)
+        {
+            FieldInfo fieldInfo = target.GetType().GetField(
+                fieldName,
+                BindingFlags.Instance | BindingFlags.NonPublic);
+
+            NUnitAssert.IsNotNull(fieldInfo, $"Expected private field '{fieldName}' to exist.");
+            fieldInfo.SetValue(target, value);
+        }
+
         private static Vector3 ToVector3(Unity.Mathematics.float3 value)
         {
             return new Vector3(value.x, value.y, value.z);
+        }
+
+        private sealed class TestMessageBusScope : IDisposable
+        {
+            private readonly GameObject _globalBusHost;
+            private readonly MessageBus _previousGlobalBus;
+
+            public TestMessageBusScope()
+            {
+                _previousGlobalBus = GlobalStaticData.GlobalMessageBus;
+                _globalBusHost = new GameObject("GlobalMessageBus");
+                GlobalStaticData.GlobalMessageBus = _globalBusHost.AddComponent<MessageBus>();
+            }
+
+            public void Dispose()
+            {
+                GlobalStaticData.GlobalMessageBus = _previousGlobalBus;
+                UnityEngine.Object.DestroyImmediate(_globalBusHost);
+            }
         }
 
         private static Transform FindChildByName(Transform root, string childName)

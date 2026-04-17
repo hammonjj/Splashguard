@@ -237,6 +237,7 @@ namespace Bitbox
             Assert.IsNotNull(_actionAction, $"{nameof(HelmControl)} requires the '{Strings.ActionAction}' action.");
             Assert.IsNotNull(_killThrottleAction, $"{nameof(HelmControl)} requires the '{Strings.KillThrottleAction}' action.");
 
+            ActivateInputMap(playerInput, Strings.NavalNavigation);
             _controllingPlayerInput = playerInput;
             CaptureControlledPlayerPose(playerInput.transform);
             _suppressExitUntilActionReleased = true;
@@ -302,6 +303,7 @@ namespace Bitbox
             _suppressExitUntilActionReleased = false;
             SyncControlledPlayerPose(releasedPlayerInput.transform);
             RestoreControlledPlayerColliders();
+            ActivateInputMap(releasedPlayerInput, Strings.ThirdPersonControls);
 
             if (publishEvent)
             {
@@ -562,6 +564,18 @@ namespace Bitbox
             InputActionMap thirdPersonMap = playerInput.actions.FindActionMap(Strings.ThirdPersonControls, throwIfNotFound: false);
             InputAction actionAction = thirdPersonMap?.FindAction(Strings.ActionAction, throwIfNotFound: false);
             return actionAction != null && actionAction.WasPressedThisFrame();
+        }
+
+        private static void ActivateInputMap(PlayerInput playerInput, string actionMapName)
+        {
+            if (playerInput == null || string.IsNullOrWhiteSpace(actionMapName))
+            {
+                return;
+            }
+
+            playerInput.actions.Enable();
+            playerInput.SwitchCurrentActionMap(actionMapName);
+            playerInput.ActivateInput();
         }
 
         private static string DescribePlayer(PlayerInput playerInput)

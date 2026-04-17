@@ -1,5 +1,8 @@
 using System;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Bitbox.Toymageddon.Nautical
 {
@@ -65,6 +68,13 @@ namespace Bitbox.Toymageddon.Nautical
 
         public void SyncNow()
         {
+#if UNITY_EDITOR
+            if (!Application.isPlaying && IsPersistentPrefabAsset())
+            {
+                return;
+            }
+#endif
+
             Material sourceMaterial = _sourceOceanRenderer != null ? _sourceOceanRenderer.sharedMaterial : null;
             if (sourceMaterial == null)
             {
@@ -128,5 +138,14 @@ namespace Bitbox.Toymageddon.Nautical
                 targetMaterial.SetFloat(MinimalTransparencyId, minimalTransparency);
             }
         }
+
+#if UNITY_EDITOR
+        private bool IsPersistentPrefabAsset()
+        {
+            return EditorUtility.IsPersistent(this)
+                || EditorUtility.IsPersistent(gameObject)
+                || PrefabUtility.IsPartOfPrefabAsset(gameObject);
+        }
+#endif
     }
 }

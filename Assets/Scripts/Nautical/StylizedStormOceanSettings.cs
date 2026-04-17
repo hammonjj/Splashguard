@@ -1,6 +1,9 @@
 using StormBreakers;
 using UnityEngine;
 using UnityEngine.VFX;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Bitbox.Toymageddon.Nautical
 {
@@ -63,6 +66,13 @@ namespace Bitbox.Toymageddon.Nautical
 
         public void Apply()
         {
+#if UNITY_EDITOR
+            if (!Application.isPlaying && IsPersistentPrefabAsset())
+            {
+                return;
+            }
+#endif
+
             OceanController controller = GetComponent<OceanController>();
             if (controller == null)
             {
@@ -97,6 +107,13 @@ namespace Bitbox.Toymageddon.Nautical
 
         private void LateUpdate()
         {
+#if UNITY_EDITOR
+            if (!Application.isPlaying && IsPersistentPrefabAsset())
+            {
+                return;
+            }
+#endif
+
             if (_applyEveryFrame)
             {
                 ApplyMaterialSettings();
@@ -201,5 +218,14 @@ namespace Bitbox.Toymageddon.Nautical
                 material.SetFloat(propertyId, value);
             }
         }
+
+#if UNITY_EDITOR
+        private bool IsPersistentPrefabAsset()
+        {
+            return EditorUtility.IsPersistent(this)
+                || EditorUtility.IsPersistent(gameObject)
+                || PrefabUtility.IsPartOfPrefabAsset(gameObject);
+        }
+#endif
     }
 }

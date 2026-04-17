@@ -35,11 +35,13 @@ namespace BitBox.Toymageddon.Weapons
         private GameObject _weaponOwnerRoot;
         private int _controllingPlayerIndex = -1;
         private int _currentAmmo;
+        private float _currentHeat;
         private bool _hasControl;
         private bool _fireHeld;
         private bool _spinupActive;
         private bool _hasFiredSinceTriggerHeld;
         private bool _dryFirePublishedSinceTriggerHeld;
+        private bool _isOverheated;
         private bool _isPaused;
         private bool _infiniteAmmo;
         private bool _configurationErrorLogged;
@@ -53,6 +55,13 @@ namespace BitBox.Toymageddon.Weapons
             : 0;
         public bool InfiniteAmmo => _infiniteAmmo;
         public WeaponDefinition ActiveWeapon => _activeWeapon;
+        public bool HeatEnabled => ActiveHeat != null;
+        public float CurrentHeat => HeatEnabled ? _currentHeat : 0f;
+        public float MaxHeat => ActiveHeat != null ? ActiveHeat.MaxHeat : 0f;
+        public float HeatNormalized => ActiveHeat != null ? Mathf.Clamp01(_currentHeat / ActiveHeat.MaxHeat) : 0f;
+        public bool IsOverheated => HeatEnabled && _isOverheated;
+
+        private WeaponHeatDefinition ActiveHeat => _activeWeapon != null ? _activeWeapon.Heat : null;
 
         protected override void OnAwakened()
         {
@@ -69,12 +78,14 @@ namespace BitBox.Toymageddon.Weapons
             _localMessageBus.Subscribe<WeaponControlAcquiredEvent>(OnWeaponControlAcquired);
             _localMessageBus.Subscribe<WeaponControlReleasedEvent>(OnWeaponControlReleased);
             _localMessageBus.Subscribe<WeaponFireInputEvent>(OnWeaponFireInput);
+            _localMessageBus.Subscribe<WeaponHeatSnapshotRequestedEvent>(OnWeaponHeatSnapshotRequested);
             _globalMessageBus.Subscribe<PauseGameEvent>(OnPauseGame);
             _globalMessageBus.Subscribe<InfiniteAmmoEvent>(OnInfiniteAmmo);
 
             _infiniteAmmo = DebugContext.InfiniteAmmo;
             LogInfo($"Weapon controller enabled. weapon={DescribeWeapon(_activeWeapon)}, ammo={_currentAmmo}, infiniteAmmo={_infiniteAmmo}, localFireSubscribers={_localMessageBus.GetSubscriberCount<WeaponFireInputEvent>()}.");
             PublishAmmoChanged();
+            PublishHeatChanged();
         }
 
         protected override void OnDisabled()
@@ -83,13 +94,24 @@ namespace BitBox.Toymageddon.Weapons
             _localMessageBus?.Unsubscribe<WeaponControlAcquiredEvent>(OnWeaponControlAcquired);
             _localMessageBus?.Unsubscribe<WeaponControlReleasedEvent>(OnWeaponControlReleased);
             _localMessageBus?.Unsubscribe<WeaponFireInputEvent>(OnWeaponFireInput);
+            _localMessageBus?.Unsubscribe<WeaponHeatSnapshotRequestedEvent>(OnWeaponHeatSnapshotRequested);
             _globalMessageBus?.Unsubscribe<PauseGameEvent>(OnPauseGame);
             _globalMessageBus?.Unsubscribe<InfiniteAmmoEvent>(OnInfiniteAmmo);
         }
 
         protected override void OnUpdated()
         {
+            if (!_isPaused)
+            {
+                TickHeat(Time.deltaTime);
+            }
+
             if (!_hasControl || !_fireHeld || _isPaused || !HasValidWeaponConfiguration())
+            {
+                return;
+            }
+
+            if (_isOverheated)
             {
                 return;
             }
@@ -135,6 +157,7 @@ namespace BitBox.Toymageddon.Weapons
             }
 
             _activeWeapon = resolvedWeapon;
+            ResetHeatState();
             if (_activeWeapon != null && _activeWeapon.Magazine != null)
             {
                 _currentAmmo = _activeWeapon.Magazine.StartsFull
@@ -181,6 +204,7 @@ namespace BitBox.Toymageddon.Weapons
             RebuildIgnoredCollisionColliders(@event.PlayerRoot, @event.WeaponRoot, @event.OwnerRoot);
             LogInfo($"Weapon control acquired. playerIndex={_controllingPlayerIndex}, weapon={DescribeWeapon(_activeWeapon)}, ammo={_currentAmmo}, infiniteAmmo={_infiniteAmmo}, ignoredColliders={_ignoredCollisionColliders.Count}.");
             PublishAmmoChanged();
+            PublishHeatChanged();
         }
 
         private void OnWeaponControlReleased(WeaponControlReleasedEvent @event)
@@ -191,12 +215,28 @@ namespace BitBox.Toymageddon.Weapons
             }
 
             ResetTrigger(publishSpinupCancelled: true);
+            PublishHeatChanged();
             _hasControl = false;
             _controllingPlayerIndex = -1;
             _controllingPlayerRoot = null;
             _weaponOwnerRoot = null;
             _ignoredCollisionColliders.Clear();
             _ignoredCollisionLookup.Clear();
+        }
+
+        private void OnWeaponHeatSnapshotRequested(WeaponHeatSnapshotRequestedEvent @event)
+        {
+            if (@event == null)
+            {
+                return;
+            }
+
+            if (_hasControl && @event.PlayerIndex != _controllingPlayerIndex)
+            {
+                return;
+            }
+
+            PublishHeatChanged();
         }
 
         private void OnWeaponFireInput(WeaponFireInputEvent @event)
@@ -233,6 +273,94 @@ namespace BitBox.Toymageddon.Weapons
             PublishAmmoChanged();
         }
 
+        private void TickHeat(float deltaTime)
+        {
+            WeaponHeatDefinition heatDefinition = ActiveHeat;
+            if (heatDefinition == null)
+            {
+                if (_currentHeat > 0f || _isOverheated)
+                {
+                    ResetHeatState();
+                    PublishHeatChanged();
+                }
+
+                return;
+            }
+
+            bool automaticFiringActive = _hasControl
+                && _fireHeld
+                && _hasFiredSinceTriggerHeld
+                && !_dryFirePublishedSinceTriggerHeld
+                && !_isOverheated;
+            if (!_isOverheated && automaticFiringActive)
+            {
+                return;
+            }
+
+            if (_currentHeat <= 0f && !_isOverheated)
+            {
+                return;
+            }
+
+            float previousHeat = _currentHeat;
+            _currentHeat = WeaponHeatUtility.Cool(heatDefinition, _currentHeat, _isOverheated, deltaTime);
+
+            if (_isOverheated && _currentHeat <= heatDefinition.RecoverHeat + 0.0001f)
+            {
+                _currentHeat = heatDefinition.RecoverHeat;
+                _isOverheated = false;
+                PublishHeatChanged();
+                PublishRecoveredFromOverheat();
+
+                if (_hasControl && _fireHeld && !_isPaused && HasValidWeaponConfiguration())
+                {
+                    StartTriggerCycle();
+                }
+
+                return;
+            }
+
+            if (!Mathf.Approximately(previousHeat, _currentHeat))
+            {
+                PublishHeatChanged();
+            }
+        }
+
+        private void AddShotHeat()
+        {
+            WeaponHeatDefinition heatDefinition = ActiveHeat;
+            if (heatDefinition == null)
+            {
+                return;
+            }
+
+            _currentHeat = WeaponHeatUtility.AddShotHeat(heatDefinition, _currentHeat);
+            PublishHeatChanged();
+
+            if (WeaponHeatUtility.IsAtOverheatThreshold(heatDefinition, _currentHeat) && !_isOverheated)
+            {
+                _isOverheated = true;
+                CancelActiveFireForOverheat();
+                PublishHeatChanged();
+                PublishOverheated();
+            }
+        }
+
+        private void CancelActiveFireForOverheat()
+        {
+            _spinupActive = false;
+            _hasFiredSinceTriggerHeld = false;
+            _dryFirePublishedSinceTriggerHeld = false;
+            _spinupElapsed = 0f;
+            _nextShotTime = 0f;
+        }
+
+        private void ResetHeatState()
+        {
+            _currentHeat = 0f;
+            _isOverheated = false;
+        }
+
         private void BeginTriggerHold()
         {
             if (_fireHeld || _isPaused)
@@ -241,6 +369,16 @@ namespace BitBox.Toymageddon.Weapons
             }
 
             _fireHeld = true;
+            StartTriggerCycle();
+        }
+
+        private void StartTriggerCycle()
+        {
+            if (_isOverheated)
+            {
+                return;
+            }
+
             _spinupActive = false;
             _hasFiredSinceTriggerHeld = false;
             _dryFirePublishedSinceTriggerHeld = false;
@@ -343,6 +481,11 @@ namespace BitBox.Toymageddon.Weapons
                 return false;
             }
 
+            if (_isOverheated)
+            {
+                return false;
+            }
+
             MagazineDefinition magazine = _activeWeapon.Magazine;
             AmmoDefinition ammo = _activeWeapon.Ammo;
             ProjectileDefinition projectile = ammo.Projectile;
@@ -376,6 +519,8 @@ namespace BitBox.Toymageddon.Weapons
             {
                 _currentAmmo = Mathf.Max(0, _currentAmmo - magazine.AmmoConsumedPerShot);
             }
+
+            AddShotHeat();
 
             _globalMessageBus.Publish(new WeaponFiredEvent(
                 _controllingPlayerIndex,
@@ -441,6 +586,62 @@ namespace BitBox.Toymageddon.Weapons
                 _currentAmmo,
                 _activeWeapon.Magazine.ClipCapacity,
                 _infiniteAmmo));
+        }
+
+        private void PublishHeatChanged()
+        {
+            if (_localMessageBus == null || _activeWeapon == null)
+            {
+                return;
+            }
+
+            WeaponHeatDefinition heatDefinition = ActiveHeat;
+            bool heatEnabled = heatDefinition != null;
+            float maxHeat = heatEnabled ? heatDefinition.MaxHeat : 0f;
+            float currentHeat = heatEnabled ? Mathf.Clamp(_currentHeat, 0f, maxHeat) : 0f;
+            float normalizedHeat = heatEnabled && maxHeat > 0f ? Mathf.Clamp01(currentHeat / maxHeat) : 0f;
+
+            _localMessageBus.Publish(new WeaponHeatChangedEvent(
+                _controllingPlayerIndex,
+                _activeWeapon,
+                gameObject,
+                heatEnabled,
+                currentHeat,
+                maxHeat,
+                normalizedHeat,
+                heatEnabled && _isOverheated));
+        }
+
+        private void PublishOverheated()
+        {
+            if (_localMessageBus == null || _activeWeapon == null || ActiveHeat == null)
+            {
+                return;
+            }
+
+            _localMessageBus.Publish(new WeaponOverheatedEvent(
+                _controllingPlayerIndex,
+                _activeWeapon,
+                gameObject,
+                CurrentHeat,
+                MaxHeat,
+                HeatNormalized));
+        }
+
+        private void PublishRecoveredFromOverheat()
+        {
+            if (_localMessageBus == null || _activeWeapon == null || ActiveHeat == null)
+            {
+                return;
+            }
+
+            _localMessageBus.Publish(new WeaponRecoveredFromOverheatEvent(
+                _controllingPlayerIndex,
+                _activeWeapon,
+                gameObject,
+                CurrentHeat,
+                MaxHeat,
+                HeatNormalized));
         }
 
         private void PrewarmProjectilePool()

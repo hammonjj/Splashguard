@@ -281,7 +281,7 @@ Material:
     - _groundColor: {r: 0.16, g: 0.72, b: 0.64, a: 0}
     - _terrainPosition: {r: 0, g: -200, b: 0, a: 0}
     - _terrainScale: {r: 1, g: 1, b: 1, a: 0}
-    - _totalLigthColor: {r: 1, g: 0.97843134, b: 0.9196079, a: 1}
+    - _totalLigthColor: {r: 0.65295, g: 0.6421314, b: 0.60090786, a: 1}
     - _waterColor: {r: 0.0444375, g: 0.3263125, b: 0.4856875, a: 1}
     - waterColor: {r: 0.03, g: 0.25, b: 0.43, a: 1}
   m_BuildTextureStacks: []

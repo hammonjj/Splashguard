@@ -94,6 +94,100 @@ namespace BitBox.Library.Eventing.WeaponEvents
         public WeaponDefinition Weapon { get; }
     }
 
+    public sealed class WeaponHeatSnapshotRequestedEvent
+    {
+        public WeaponHeatSnapshotRequestedEvent(int playerIndex)
+        {
+            PlayerIndex = playerIndex;
+        }
+
+        public int PlayerIndex { get; }
+    }
+
+    public sealed class WeaponHeatChangedEvent
+    {
+        public WeaponHeatChangedEvent(
+            int playerIndex,
+            WeaponDefinition weapon,
+            GameObject weaponObject,
+            bool heatEnabled,
+            float currentHeat,
+            float maxHeat,
+            float normalizedHeat,
+            bool isOverheated)
+        {
+            PlayerIndex = playerIndex;
+            Weapon = weapon;
+            WeaponObject = weaponObject;
+            HeatEnabled = heatEnabled;
+            CurrentHeat = currentHeat;
+            MaxHeat = maxHeat;
+            NormalizedHeat = normalizedHeat;
+            IsOverheated = isOverheated;
+        }
+
+        public int PlayerIndex { get; }
+        public WeaponDefinition Weapon { get; }
+        public GameObject WeaponObject { get; }
+        public bool HeatEnabled { get; }
+        public float CurrentHeat { get; }
+        public float MaxHeat { get; }
+        public float NormalizedHeat { get; }
+        public bool IsOverheated { get; }
+    }
+
+    public sealed class WeaponOverheatedEvent
+    {
+        public WeaponOverheatedEvent(
+            int playerIndex,
+            WeaponDefinition weapon,
+            GameObject weaponObject,
+            float currentHeat,
+            float maxHeat,
+            float normalizedHeat)
+        {
+            PlayerIndex = playerIndex;
+            Weapon = weapon;
+            WeaponObject = weaponObject;
+            CurrentHeat = currentHeat;
+            MaxHeat = maxHeat;
+            NormalizedHeat = normalizedHeat;
+        }
+
+        public int PlayerIndex { get; }
+        public WeaponDefinition Weapon { get; }
+        public GameObject WeaponObject { get; }
+        public float CurrentHeat { get; }
+        public float MaxHeat { get; }
+        public float NormalizedHeat { get; }
+    }
+
+    public sealed class WeaponRecoveredFromOverheatEvent
+    {
+        public WeaponRecoveredFromOverheatEvent(
+            int playerIndex,
+            WeaponDefinition weapon,
+            GameObject weaponObject,
+            float currentHeat,
+            float maxHeat,
+            float normalizedHeat)
+        {
+            PlayerIndex = playerIndex;
+            Weapon = weapon;
+            WeaponObject = weaponObject;
+            CurrentHeat = currentHeat;
+            MaxHeat = maxHeat;
+            NormalizedHeat = normalizedHeat;
+        }
+
+        public int PlayerIndex { get; }
+        public WeaponDefinition Weapon { get; }
+        public GameObject WeaponObject { get; }
+        public float CurrentHeat { get; }
+        public float MaxHeat { get; }
+        public float NormalizedHeat { get; }
+    }
+
     public sealed class ProjectileSpawnedEvent
     {
         public ProjectileSpawnedEvent(

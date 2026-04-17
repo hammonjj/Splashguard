@@ -11,6 +11,7 @@ using StormBreakers;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.VFX;
 
 namespace BitBox.Toymageddon.Tests.Editor
@@ -109,6 +110,47 @@ namespace BitBox.Toymageddon.Tests.Editor
             NUnitAssert.IsTrue(
                 prefabText.Contains($"guid: {StormOceanWaterSamplerGuid}", StringComparison.Ordinal),
                 "Expected StormOcean to serialize the water sampler component.");
+        }
+
+        [Test]
+        public void StormOceanLighting_ApproximatesSkyboxAmbient()
+        {
+            AmbientMode originalMode = RenderSettings.ambientMode;
+            Color originalSky = RenderSettings.ambientSkyColor;
+            Color originalEquator = RenderSettings.ambientEquatorColor;
+            Color originalGround = RenderSettings.ambientGroundColor;
+            Color originalFlatAmbient = RenderSettings.ambientLight;
+
+            try
+            {
+                RenderSettings.ambientMode = AmbientMode.Skybox;
+                RenderSettings.ambientSkyColor = new Color(0.4f, 0.5f, 0.7f, 1f);
+                RenderSettings.ambientEquatorColor = new Color(0.2f, 0.25f, 0.3f, 1f);
+                RenderSettings.ambientGroundColor = new Color(0.05f, 0.06f, 0.08f, 1f);
+
+                MethodInfo resolveAmbientColor = typeof(OceanController).GetMethod(
+                    "ResolveAmbientColor",
+                    BindingFlags.Static | BindingFlags.NonPublic);
+                NUnitAssert.IsNotNull(resolveAmbientColor, "Expected OceanController to expose an internal skybox ambient resolver.");
+
+                Color resolved = (Color)resolveAmbientColor.Invoke(null, Array.Empty<object>());
+                Color expected =
+                    RenderSettings.ambientSkyColor * 0.5f
+                    + RenderSettings.ambientEquatorColor * 0.35f
+                    + RenderSettings.ambientGroundColor * 0.15f;
+
+                NUnitAssert.AreEqual(expected.r, resolved.r, 0.0001f);
+                NUnitAssert.AreEqual(expected.g, resolved.g, 0.0001f);
+                NUnitAssert.AreEqual(expected.b, resolved.b, 0.0001f);
+            }
+            finally
+            {
+                RenderSettings.ambientMode = originalMode;
+                RenderSettings.ambientSkyColor = originalSky;
+                RenderSettings.ambientEquatorColor = originalEquator;
+                RenderSettings.ambientGroundColor = originalGround;
+                RenderSettings.ambientLight = originalFlatAmbient;
+            }
         }
 
         [Test]
