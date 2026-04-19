@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using BitBox.Library;
 using BitBox.Library.Constants;
+using Bitbox.Splashguard.Nautical;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -991,7 +992,8 @@ namespace Bitbox
             return playerInput.currentActionMap != null
                 && playerInput.currentActionMap.name == Strings.ThirdPersonControls
                 && !HelmControl.TryGetActiveHelm(playerInput.playerIndex, out _)
-                && !DeckMountedGunControl.TryGetActiveGun(playerInput.playerIndex, out _);
+                && !DeckMountedGunControl.TryGetActiveGun(playerInput.playerIndex, out _)
+                && !CargoBayControls.TryGetActiveCargoBay(playerInput.playerIndex, out _);
         }
 
         private static bool WasAnchorActionPressedThisFrame(PlayerInput playerInput)

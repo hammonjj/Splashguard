@@ -25,6 +25,7 @@ namespace Bitbox
         private InputAction _thirdPersonPauseAction;
         private InputAction _navalPauseAction;
         private InputAction _boatGunnerPauseAction;
+        private InputAction _cranePauseAction;
         private bool _isPaused;
 
         protected override void OnAwakened()
@@ -103,17 +104,21 @@ namespace Bitbox
             InputActionMap thirdPersonMap = _playerInput.actions.FindActionMap(Strings.ThirdPersonControls, throwIfNotFound: false);
             InputActionMap navalNavigationMap = _playerInput.actions.FindActionMap(Strings.NavalNavigation, throwIfNotFound: false);
             InputActionMap boatGunnerMap = _playerInput.actions.FindActionMap(Strings.BoatGunner, throwIfNotFound: false);
+            InputActionMap craneControlsMap = _playerInput.actions.FindActionMap(Strings.CraneControls, throwIfNotFound: false);
             Assert.IsNotNull(thirdPersonMap, $"{nameof(PlayerContainer)} requires the '{Strings.ThirdPersonControls}' action map.");
             Assert.IsNotNull(navalNavigationMap, $"{nameof(PlayerContainer)} requires the '{Strings.NavalNavigation}' action map.");
             Assert.IsNotNull(boatGunnerMap, $"{nameof(PlayerContainer)} requires the '{Strings.BoatGunner}' action map.");
+            Assert.IsNotNull(craneControlsMap, $"{nameof(PlayerContainer)} requires the '{Strings.CraneControls}' action map.");
 
             _thirdPersonPauseAction = thirdPersonMap.FindAction(Strings.PauseAction, throwIfNotFound: false);
             _navalPauseAction = navalNavigationMap.FindAction(Strings.PauseAction, throwIfNotFound: false);
             _boatGunnerPauseAction = boatGunnerMap.FindAction(Strings.PauseAction, throwIfNotFound: false);
+            _cranePauseAction = craneControlsMap.FindAction(Strings.PauseAction, throwIfNotFound: false);
 
             Assert.IsNotNull(_thirdPersonPauseAction, $"{nameof(PlayerContainer)} requires the '{Strings.PauseAction}' action on '{Strings.ThirdPersonControls}'.");
             Assert.IsNotNull(_navalPauseAction, $"{nameof(PlayerContainer)} requires the '{Strings.PauseAction}' action on '{Strings.NavalNavigation}'.");
             Assert.IsNotNull(_boatGunnerPauseAction, $"{nameof(PlayerContainer)} requires the '{Strings.PauseAction}' action on '{Strings.BoatGunner}'.");
+            Assert.IsNotNull(_cranePauseAction, $"{nameof(PlayerContainer)} requires the '{Strings.PauseAction}' action on '{Strings.CraneControls}'.");
         }
 
         private void UpdateShellVisibility()
@@ -159,7 +164,8 @@ namespace Bitbox
         {
             return (_thirdPersonPauseAction != null && _thirdPersonPauseAction.WasPressedThisFrame())
                 || (_navalPauseAction != null && _navalPauseAction.WasPressedThisFrame())
-                || (_boatGunnerPauseAction != null && _boatGunnerPauseAction.WasPressedThisFrame());
+                || (_boatGunnerPauseAction != null && _boatGunnerPauseAction.WasPressedThisFrame())
+                || (_cranePauseAction != null && _cranePauseAction.WasPressedThisFrame());
         }
     }
 }

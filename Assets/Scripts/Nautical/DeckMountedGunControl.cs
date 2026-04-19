@@ -7,6 +7,7 @@ using BitBox.Library.Eventing;
 using BitBox.Library.Eventing.GlobalEvents;
 using BitBox.Library.Eventing.WeaponEvents;
 using BitBox.Toymageddon.Settings;
+using Bitbox.Splashguard.Nautical;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -632,7 +633,8 @@ namespace Bitbox
         {
             return playerInput.currentActionMap != null
                 && playerInput.currentActionMap.name == Strings.ThirdPersonControls
-                && !HelmControl.TryGetActiveHelm(playerInput.playerIndex, out _);
+                && !HelmControl.TryGetActiveHelm(playerInput.playerIndex, out _)
+                && !CargoBayControls.TryGetActiveCargoBay(playerInput.playerIndex, out _);
         }
 
         private static bool WasTakeGunPressedThisFrame(PlayerInput playerInput)

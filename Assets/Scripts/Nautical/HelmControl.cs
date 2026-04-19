@@ -7,6 +7,7 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Bitbox.Toymageddon.Nautical;
+using Bitbox.Splashguard.Nautical;
 
 namespace Bitbox
 {
@@ -556,7 +557,8 @@ namespace Bitbox
             return playerInput.currentActionMap != null
                 && playerInput.currentActionMap.name == Strings.ThirdPersonControls
                 && !AnchorControls.IsPlayerInAnchorControlRange(playerInput)
-                && !DeckMountedGunControl.TryGetActiveGun(playerInput.playerIndex, out _);
+                && !DeckMountedGunControl.TryGetActiveGun(playerInput.playerIndex, out _)
+                && !CargoBayControls.TryGetActiveCargoBay(playerInput.playerIndex, out _);
         }
 
         private static bool WasTakeHelmPressedThisFrame(PlayerInput playerInput)

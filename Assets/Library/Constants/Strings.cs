@@ -8,6 +8,7 @@ namespace BitBox.Library.Constants
     public const string ThirdPersonControls = "ThirdPersonControls";
     public const string NavalNavigation = "NavalNavigation";
     public const string BoatGunner = "BoatGunner";
+    public const string CraneControls = "CraneControls";
     public const string MoveAction = "Move";
     public const string RotateCameraAction = "RotateCamera";
     public const string PauseAction = "Pause";
