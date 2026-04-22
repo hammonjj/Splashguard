@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using BitBox.Library;
+using BitBox.Library.CameraUtils;
 using BitBox.Library.Constants;
 using BitBox.Library.Eventing.GlobalEvents;
+using Bitbox.Splashguard.Nautical.Crane;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -18,6 +20,7 @@ namespace Bitbox.Splashguard.Nautical
         [SerializeField] private GameObject _starboardDoor;
         [SerializeField] private Collider _interactionTrigger;
         [SerializeField] private Transform _stationAnchor;
+        [SerializeField] private CraneControlRig _craneRig;
 
         [Header("Door Motion")]
         [SerializeField] private float _portOpenZDegrees = 90f;
@@ -43,6 +46,14 @@ namespace Bitbox.Splashguard.Nautical
 
         public bool DoorsOpen => _doorsOpen;
         public bool HasControllingPlayer => _controllingPlayerInput != null;
+        public CameraTargetAnchors CameraAnchors
+        {
+            get
+            {
+                _craneRig ??= ResolveCraneRig();
+                return _craneRig != null ? _craneRig.CameraAnchors : null;
+            }
+        }
 
         public static bool TryGetActiveCargoBay(int playerIndex, out CargoBayControls controls)
         {
@@ -155,6 +166,7 @@ namespace Bitbox.Splashguard.Nautical
         {
             _boatTransform ??= ResolveBoatTransform();
             _interactionTrigger = ResolveInteractionTrigger();
+            _craneRig ??= ResolveCraneRig();
 
             if (_interactionTrigger == null)
             {
@@ -170,6 +182,12 @@ namespace Bitbox.Splashguard.Nautical
                     $"Cargo bay controls are missing door references. controls={name}, portDoor={_portDoor?.name ?? "None"}, starboardDoor={_starboardDoor?.name ?? "None"}.");
                 enabled = false;
             }
+
+            if (_craneRig == null)
+            {
+                LogWarning(
+                    $"Cargo bay controls do not have a crane rig assigned. controls={name}. Assign an existing {nameof(CraneControlRig)} in the prefab hierarchy; runtime crane bootstrapping is intentionally disabled.");
+            }
         }
 
         private Transform ResolveBoatTransform()
@@ -181,6 +199,18 @@ namespace Bitbox.Splashguard.Nautical
             }
 
             return transform.root != null ? transform.root : transform;
+        }
+
+        private CraneControlRig ResolveCraneRig()
+        {
+            if (_craneRig != null)
+            {
+                return _craneRig;
+            }
+
+            return transform.root != null
+                ? transform.root.GetComponentInChildren<CraneControlRig>(includeInactive: true)
+                : GetComponentInChildren<CraneControlRig>(includeInactive: true);
         }
 
         private void CacheClosedDoorRotations()
@@ -254,7 +284,9 @@ namespace Bitbox.Splashguard.Nautical
             DisableControlledPlayerColliders(playerInput.transform);
             ActiveCargoBaysByPlayerIndex[playerInput.playerIndex] = this;
             OpenDoors();
+            _craneRig?.BeginControl(playerInput);
             SyncControlledPlayerPose();
+            _globalMessageBus.Publish(new PlayerEnteredCraneEvent(playerInput.playerIndex));
 
             LogInfo($"Player took cargo bay controls. controls={name}, player={DescribePlayer(playerInput)}.");
         }
@@ -266,6 +298,7 @@ namespace Bitbox.Splashguard.Nautical
                 _suppressExitUntilActionReleased = false;
                 RestoreControlledPlayerColliders();
                 CloseDoors();
+                _craneRig?.EndControl();
                 return;
             }
 
@@ -283,6 +316,7 @@ namespace Bitbox.Splashguard.Nautical
             _actionAction = null;
             _suppressExitUntilActionReleased = false;
             CloseDoors();
+            _craneRig?.EndControl();
             RestoreControlledPlayerColliders();
 
             if (_controlledPlayerMovement != null)
@@ -295,6 +329,21 @@ namespace Bitbox.Splashguard.Nautical
             {
                 ActivateInputMap(releasedPlayerInput, Strings.ThirdPersonControls);
             }
+
+            _globalMessageBus.Publish(new PlayerExitedCraneEvent(playerIndex));
+        }
+
+        public Transform ResolveCraneCameraLookAtTarget()
+        {
+            _craneRig ??= ResolveCraneRig();
+            Transform rigLookAt = _craneRig != null ? _craneRig.CameraLookAtTarget : null;
+            if (rigLookAt != null)
+            {
+                return rigLookAt;
+            }
+
+            CameraTargetAnchors cameraAnchors = CameraAnchors;
+            return cameraAnchors != null ? cameraAnchors.LookAtTarget : null;
         }
 
         private void ReadControlInputs()

@@ -39,6 +39,7 @@ The window has these main controls:
 - `Preview Mode`: switches between height shading and terrain zone colors.
 - `Generate In Open Scene`: finds or creates a `TerrainGenerationDemoRunner` and generates terrain in the current scene.
 - `Export Mesh`: saves the generated mesh as a Unity `.asset`.
+- `Export OBJ`: saves the generated terrain to a Blender-friendly `.obj` with separate land and water objects.
 - `Export Preview PNG`: saves the current height or zone preview as a PNG.
 - `Export TerrainData`: saves a normalized Unity `TerrainData` asset.
 
@@ -162,6 +163,7 @@ Assembly boundaries:
 Use the editor window export buttons:
 
 - Mesh `.asset`: reusable real terrain mesh generated from the current preset.
+- OBJ `.obj`: Blender-friendly export with separate `Land`, `ShallowWater`, and `DeepWater` objects when those layers exist.
 - Preview PNG: colorized height and land/water preview.
 - `TerrainData`: normalized Unity terrain asset.
 

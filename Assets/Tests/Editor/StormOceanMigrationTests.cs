@@ -113,6 +113,56 @@ namespace BitBox.Toymageddon.Tests.Editor
         }
 
         [Test]
+        public void StormOceanController_RepairsMaterialMatricesAfterAssetRefresh()
+        {
+            var stormOceanPrefab = LoadRequiredPrefab(StormOceanPrefabPath);
+            var stormOcean = PrefabUtility.InstantiatePrefab(stormOceanPrefab) as GameObject;
+            NUnitAssert.IsNotNull(stormOcean, "Expected to instantiate StormOcean prefab.");
+
+            Material testMaterial = null;
+            try
+            {
+                var oceanController = stormOcean.GetComponent<OceanController>();
+                var meshRenderer = stormOcean.GetComponent<MeshRenderer>();
+                NUnitAssert.IsNotNull(oceanController);
+                NUnitAssert.IsNotNull(meshRenderer);
+                NUnitAssert.IsNotNull(meshRenderer.sharedMaterial);
+
+                testMaterial = new Material(meshRenderer.sharedMaterial)
+                {
+                    name = "StormOceanRepairTestMaterial"
+                };
+                meshRenderer.sharedMaterial = testMaterial;
+                oceanController.logMaterialRepairDiagnostics = false;
+
+                MethodInfo onEnable = typeof(OceanController).GetMethod(
+                    "OnEnable",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                NUnitAssert.IsNotNull(onEnable);
+                onEnable.Invoke(oceanController, null);
+
+                int lidrId = Shader.PropertyToID("_LIDR");
+                int nkvwId = Shader.PropertyToID("_NKVW");
+                testMaterial.SetMatrix(lidrId, Matrix4x4.zero);
+                testMaterial.SetMatrix(nkvwId, Matrix4x4.zero);
+
+                NUnitAssert.IsTrue(oceanController.RepairMaterialStateIfNeeded("unit-test"));
+                AssertMatrixEqual(Ocean.LIDR, testMaterial.GetMatrix(lidrId));
+                AssertMatrixEqual(Ocean.NKVW, testMaterial.GetMatrix(nkvwId));
+                NUnitAssert.IsNotNull(testMaterial.GetTexture("_terrainHeightmap"));
+            }
+            finally
+            {
+                if (testMaterial != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(testMaterial);
+                }
+
+                UnityEngine.Object.DestroyImmediate(stormOcean);
+            }
+        }
+
+        [Test]
         public void StormOceanLighting_ApproximatesSkyboxAmbient()
         {
             AmbientMode originalMode = RenderSettings.ambientMode;
@@ -290,6 +340,17 @@ namespace BitBox.Toymageddon.Tests.Editor
             }
 
             return Mathf.Abs((float)signedVolume);
+        }
+
+        private static void AssertMatrixEqual(Matrix4x4 expected, Matrix4x4 actual)
+        {
+            for (int row = 0; row < 4; row++)
+            {
+                for (int column = 0; column < 4; column++)
+                {
+                    NUnitAssert.AreEqual(expected[row, column], actual[row, column], 0.0001f);
+                }
+            }
         }
     }
 }

@@ -215,7 +215,7 @@ Material:
     - _minimalTransparancy: 0.82
     - _minimalTransparency: 0.82
     - _normalPrecision: 0.1
-    - _oceanIntensity: 0.45
+    - _oceanIntensity: 0.23099999
     - _opacity: 0.5
     - _power: 1.01
     - _resize: 0
@@ -235,10 +235,10 @@ Material:
     - _ripples3Size: 48
     - _ripples3Speed: 0.08
     - _ripplesDirection: 0
-    - _ripplesIntensity: 0.08
+    - _ripplesIntensity: 0.5
     - _ripplesSize: 0.1
     - _ripples_lenght: 30
-    - _smoothness: 0.58
+    - _smoothness: 1
     - _subSurfaceScatering: 0.28
     - _subSurfaceScattering: 0.28
     - _transparancy: 0.18
@@ -268,8 +268,8 @@ Material:
     - _groundColor: {r: 0.16, g: 0.72, b: 0.64, a: 0}
     - _terrainPosition: {r: 0, g: -200, b: 0, a: 0}
     - _terrainScale: {r: 1, g: 1, b: 1, a: 0}
-    - _totalLigthColor: {r: 1, g: 0.97843134, b: 0.9196079, a: 1}
-    - _waterColor: {r: 0.03, g: 0.25, b: 0.43, a: 1}
+    - _totalLigthColor: {r: 0.15294999, g: 0.1637, b: 0.18130001, a: 1}
+    - _waterColor: {r: 0.03, g: 0.24999997, b: 0.42999998, a: 1}
     - waterColor: {r: 0.03, g: 0.25, b: 0.43, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

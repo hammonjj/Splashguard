@@ -197,6 +197,9 @@ namespace BitBox.Toymageddon.Tests.Editor
 
                 NUnitAssert.IsNotNull(craneControls);
                 NUnitAssert.IsNotNull(craneControls.FindAction(Strings.ActionAction, throwIfNotFound: false));
+                NUnitAssert.IsNotNull(craneControls.FindAction(Strings.MoveAction, throwIfNotFound: false));
+                NUnitAssert.IsNotNull(craneControls.FindAction(Strings.HoistAction, throwIfNotFound: false));
+                NUnitAssert.IsNotNull(craneControls.FindAction(Strings.SuctionAction, throwIfNotFound: false));
                 NUnitAssert.IsNotNull(craneControls.FindAction(Strings.PauseAction, throwIfNotFound: false));
             }
             finally
@@ -266,6 +269,9 @@ namespace BitBox.Toymageddon.Tests.Editor
             inputActions.AddActionMap(Strings.ThirdPersonControls).AddAction(Strings.ActionAction);
             InputActionMap craneControlsMap = inputActions.AddActionMap(Strings.CraneControls);
             craneControlsMap.AddAction(Strings.ActionAction);
+            craneControlsMap.AddAction(Strings.MoveAction, InputActionType.Value);
+            craneControlsMap.AddAction(Strings.HoistAction, InputActionType.Value);
+            craneControlsMap.AddAction(Strings.SuctionAction);
             craneControlsMap.AddAction(Strings.PauseAction);
             inputActions.AddActionMap(Strings.NavalNavigation).AddAction(Strings.ActionAction);
             inputActions.AddActionMap(Strings.BoatGunner).AddAction(Strings.ActionAction);

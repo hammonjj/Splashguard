@@ -41,6 +41,7 @@ namespace BitBox.TerrainGeneration.Core
                 }
             }
 
+            ApplyUnderwaterProfile(request, heights);
             return new Heightfield(width, depth, heights, request.SeaLevel);
         }
 
@@ -58,8 +59,32 @@ namespace BitBox.TerrainGeneration.Core
                         request.IslandRadius,
                         request.FalloffExponent,
                         request.BlendMode);
+                case TerrainMaskMode.RoundedBasin:
+                    return new RoundedBasinMask(
+                        request.BasinWidth,
+                        request.BasinDepth,
+                        request.BasinCornerRadius,
+                        request.BasinEdgeSoftness,
+                        request.FalloffExponent);
                 default:
                     return new NoFalloffMask();
+            }
+        }
+
+        private static void ApplyUnderwaterProfile(TerrainGenerationRequest request, float[] heights)
+        {
+            if (request.UnderwaterProfile != TerrainUnderwaterProfile.FlatFloor)
+            {
+                return;
+            }
+
+            float floorHeight = request.SeaLevel - request.FlatFloorDepth;
+            for (int i = 0; i < heights.Length; i++)
+            {
+                if (heights[i] < request.SeaLevel)
+                {
+                    heights[i] = floorHeight;
+                }
             }
         }
     }

@@ -11,7 +11,14 @@ namespace BitBox.TerrainGeneration.Core
         None = 0,
         Radial = 1,
         DistanceToEdge = 2,
-        Archipelago = 3
+        Archipelago = 3,
+        RoundedBasin = 4
+    }
+
+    public enum TerrainUnderwaterProfile
+    {
+        Natural = 0,
+        FlatFloor = 1
     }
 
     public enum MultiIslandBlendMode

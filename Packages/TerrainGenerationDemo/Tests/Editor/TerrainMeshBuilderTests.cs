@@ -72,6 +72,136 @@ namespace BitBox.TerrainGeneration.Tests.Editor
         }
 
         [Test]
+        public void BuildLayeredMeshes_WithShorelineWalls_AppendsWaterlineAndFloorVertices()
+        {
+            const float seaLevel = 0f;
+            const float floorHeight = -2f;
+            var heightfield = new Heightfield(
+                3,
+                3,
+                new[]
+                {
+                    1f, floorHeight, floorHeight,
+                    1f, floorHeight, floorHeight,
+                    1f, floorHeight, floorHeight
+                },
+                seaLevel);
+            var zoneMap = new TerrainZoneMap(
+                3,
+                3,
+                new[]
+                {
+                    TerrainZone.Beach, TerrainZone.ShallowWater, TerrainZone.ShallowWater,
+                    TerrainZone.Beach, TerrainZone.ShallowWater, TerrainZone.ShallowWater,
+                    TerrainZone.Beach, TerrainZone.ShallowWater, TerrainZone.ShallowWater
+                });
+
+            LayeredTerrainMeshes meshes = LayeredTerrainMeshBuilder.Build(
+                heightfield,
+                zoneMap,
+                worldSizeX: 2f,
+                worldSizeZ: 2f,
+                TerrainZoneColorPalette.Default,
+                smoothingPasses: 0,
+                includeShorelineWalls: true,
+                shorelineFloorHeight: floorHeight);
+
+            Assert.Greater(meshes.Land.Vertices.Length, heightfield.Width * heightfield.Depth);
+
+            bool hasWaterlineVertex = false;
+            bool hasFloorVertex = false;
+            for (int i = heightfield.Width * heightfield.Depth; i < meshes.Land.Vertices.Length; i++)
+            {
+                float y = meshes.Land.Vertices[i].y;
+                bool isWaterline = Mathf.Abs(y - seaLevel) <= 0.0001f;
+                bool isFloor = Mathf.Abs(y - floorHeight) <= 0.0001f;
+                Assert.IsTrue(isWaterline || isFloor);
+                hasWaterlineVertex |= isWaterline;
+                hasFloorVertex |= isFloor;
+            }
+
+            Assert.IsTrue(hasWaterlineVertex);
+            Assert.IsTrue(hasFloorVertex);
+        }
+
+        [Test]
+        public void BuildLayeredMeshes_WithRoundedBasinRequest_AppendsSmoothPoolBorderWallAndFloor()
+        {
+            const float seaLevel = 0f;
+            const float flatFloorDepth = 2f;
+            const float poolBorderHeight = 0.35f;
+            TerrainGenerationRequest request = new TerrainGenerationRequest(
+                seed: 11,
+                resolutionX: 65,
+                resolutionZ: 65,
+                worldSizeX: 64f,
+                worldSizeZ: 64f,
+                heightScale: 0f,
+                seaLevel: seaLevel,
+                noiseScale: 500f,
+                octaves: 1,
+                persistence: 0f,
+                lacunarity: 1f,
+                noiseMode: TerrainNoiseMode.Smooth,
+                maskMode: TerrainMaskMode.RoundedBasin,
+                falloffStrength: 8f,
+                falloffExponent: 1f,
+                islandCount: 1,
+                islandRadius: 0.4f,
+                minIslandSeparation: 0.2f,
+                blendMode: MultiIslandBlendMode.SmoothUnion,
+                underwaterProfile: TerrainUnderwaterProfile.FlatFloor,
+                flatFloorDepth: flatFloorDepth,
+                basinWidth: 0.7f,
+                basinDepth: 0.5f,
+                basinCornerRadius: 0.16f,
+                basinEdgeSoftness: 0.02f,
+                poolBorderWidth: 0.06f,
+                poolBorderHeight: poolBorderHeight);
+            Heightfield heightfield = TerrainGenerator.GenerateHeightfield(request);
+            TerrainZoneMap zoneMap = TerrainZoneClassifier.GenerateZoneMap(
+                heightfield,
+                TerrainZoneSettings.Default,
+                request.WorldSizeX,
+                request.WorldSizeZ);
+
+            LayeredTerrainMeshes meshes = LayeredTerrainMeshBuilder.Build(
+                heightfield,
+                zoneMap,
+                request.WorldSizeX,
+                request.WorldSizeZ,
+                TerrainZoneColorPalette.Default,
+                smoothingPasses: 0,
+                request: request);
+
+            int baseVertexCount = heightfield.Width * heightfield.Depth;
+            Assert.Greater(meshes.Land.Vertices.Length, baseVertexCount);
+            Assert.IsTrue(meshes.Land.Triangles.All(index => index >= 0 && index < meshes.Land.Vertices.Length));
+
+            int seaLevelVertexCount = 0;
+            int floorVertexCount = 0;
+            int borderTopVertexCount = 0;
+            float floorHeight = seaLevel - flatFloorDepth;
+            float borderTopHeight = seaLevel + poolBorderHeight;
+            for (int i = baseVertexCount; i < meshes.Land.Vertices.Length; i++)
+            {
+                float y = meshes.Land.Vertices[i].y;
+                bool isSeaLevel = Mathf.Abs(y - seaLevel) <= 0.0001f;
+                bool isFloor = Mathf.Abs(y - floorHeight) <= 0.0001f;
+                bool isBorderTop = Mathf.Abs(y - borderTopHeight) <= 0.0001f;
+
+                Assert.IsTrue(isSeaLevel || isFloor || isBorderTop);
+                seaLevelVertexCount += isSeaLevel ? 1 : 0;
+                floorVertexCount += isFloor ? 1 : 0;
+                borderTopVertexCount += isBorderTop ? 1 : 0;
+            }
+
+            Assert.Greater(seaLevelVertexCount, 80);
+            Assert.Greater(floorVertexCount, 80);
+            Assert.Greater(borderTopVertexCount, 80);
+        }
+
+        [Test]
         public void DemoRunner_Regenerate_ReusesSingleGeneratedChild()
         {
             var root = new GameObject("Terrain Runner Test");

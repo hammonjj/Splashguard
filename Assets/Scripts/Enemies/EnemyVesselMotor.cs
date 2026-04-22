@@ -451,10 +451,6 @@ namespace Bitbox.Splashguard.Enemies
             {
                 LogWarning(diagnostic);
             }
-            else
-            {
-                LogInfo(diagnostic);
-            }
         }
 
         private void LogMissingReferenceDiagnostic(EnemyVesselData data)

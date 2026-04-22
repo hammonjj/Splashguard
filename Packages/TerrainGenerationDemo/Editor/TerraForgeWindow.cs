@@ -7,8 +7,8 @@ namespace BitBox.TerrainGeneration.Editor
 {
     public sealed class TerraForgeWindow : EditorWindow
     {
-        private const string DefaultPresetPath = "Packages/TerrainGenerationDemo/Assets/DefaultIslandPreset.asset";
-        private const string DefaultPropLibraryPath = "Packages/TerrainGenerationDemo/Assets/DefaultTerrainPropLibrary.asset";
+        private const string DefaultPresetPath = "Packages/com.bitboxarcade.terraforge/Assets/DefaultWaterParkPreset.asset";
+        private const string DefaultPropLibraryPath = "Packages/com.bitboxarcade.terraforge/Assets/DefaultTerrainPropLibrary.asset";
         private static readonly GUIContent PresetLabel = new(
             "Preset",
             "ScriptableObject containing all terrain generation settings edited by this window.");
@@ -24,6 +24,9 @@ namespace BitBox.TerrainGeneration.Editor
         private static readonly GUIContent ExportMeshLabel = new(
             "Export Mesh",
             "Generate the current terrain and save the mesh as a reusable Unity .asset file.");
+        private static readonly GUIContent ExportObjLabel = new(
+            "Export OBJ",
+            "Generate the current terrain and save a Blender-friendly OBJ with separate land and water objects.");
         private static readonly GUIContent ExportPreviewLabel = new(
             "Export Preview PNG",
             "Generate the current terrain preview texture and save it as a PNG asset.");
@@ -165,6 +168,11 @@ namespace BitBox.TerrainGeneration.Editor
                 {
                     ExportMesh();
                 }
+
+                if (GUILayout.Button(ExportObjLabel))
+                {
+                    ExportObj();
+                }
             }
 
             using (new EditorGUILayout.HorizontalScope())
@@ -271,21 +279,24 @@ namespace BitBox.TerrainGeneration.Editor
                 return;
             }
 
-            TerrainGenerationRequest request = _preset.ToRequest();
-            Heightfield heightfield = TerrainGenerator.GenerateHeightfield(request);
-            TerrainZoneMap zoneMap = TerrainZoneClassifier.GenerateZoneMap(
-                heightfield,
-                _preset.ToZoneSettings(),
-                request.WorldSizeX,
-                request.WorldSizeZ);
-            LayeredTerrainMeshes meshes = LayeredTerrainMeshBuilder.Build(
-                heightfield,
-                zoneMap,
-                request.WorldSizeX,
-                request.WorldSizeZ,
-                _preset.ToZoneColorPalette(),
-                _preset.ZoneColorSmoothingPasses);
+            LayeredTerrainMeshes meshes = BuildLayeredMeshes();
             Export.MeshAssetExporter.SaveMeshAsset(meshes.Land, path);
+        }
+
+        private void ExportObj()
+        {
+            string path = EditorUtility.SaveFilePanel(
+                "Export TerraForge OBJ",
+                Application.dataPath,
+                "TerraForgeTerrain",
+                "obj");
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
+            LayeredTerrainMeshes meshes = BuildLayeredMeshes();
+            Export.ObjMeshExporter.SaveObj(meshes, path);
         }
 
         private void ExportPreviewPng()
@@ -340,6 +351,25 @@ namespace BitBox.TerrainGeneration.Editor
                 request.WorldSizeZ);
             AssetDatabase.CreateAsset(terrainData, path);
             AssetDatabase.SaveAssets();
+        }
+
+        private LayeredTerrainMeshes BuildLayeredMeshes()
+        {
+            TerrainGenerationRequest request = _preset.ToRequest();
+            Heightfield heightfield = TerrainGenerator.GenerateHeightfield(request);
+            TerrainZoneMap zoneMap = TerrainZoneClassifier.GenerateZoneMap(
+                heightfield,
+                _preset.ToZoneSettings(),
+                request.WorldSizeX,
+                request.WorldSizeZ);
+            return LayeredTerrainMeshBuilder.Build(
+                heightfield,
+                zoneMap,
+                request.WorldSizeX,
+                request.WorldSizeZ,
+                _preset.ToZoneColorPalette(),
+                _preset.ZoneColorSmoothingPasses,
+                request);
         }
 
         private enum TerrainPreviewMode

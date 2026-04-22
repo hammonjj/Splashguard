@@ -46,4 +46,24 @@ namespace BitBox.Library.Eventing.GlobalEvents
             PlayerIndex = playerIndex;
         }
     }
+
+    public sealed class PlayerEnteredCraneEvent
+    {
+        public int PlayerIndex { get; }
+
+        public PlayerEnteredCraneEvent(int playerIndex)
+        {
+            PlayerIndex = playerIndex;
+        }
+    }
+
+    public sealed class PlayerExitedCraneEvent
+    {
+        public int PlayerIndex { get; }
+
+        public PlayerExitedCraneEvent(int playerIndex)
+        {
+            PlayerIndex = playerIndex;
+        }
+    }
 }

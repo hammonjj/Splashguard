@@ -9,5 +9,6 @@ namespace BitBox.Library.Constants
         public const string PlayerThreeSpawnPoint = "PlayerThreeSpawnPoint";
         public const string PlayerFourSpawnPoint = "PlayerFourSpawnPoint";
         public const string HubWorldCoordinator = "HubWorldCoordinator";
+        public const string PlayerPickup = "PlayerPickup";
     }
 }

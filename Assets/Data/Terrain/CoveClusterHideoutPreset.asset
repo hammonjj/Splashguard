@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0df63ea83be348958a0eab42b3bd2b19, type: 3}
   m_Name: CoveClusterHideoutPreset
   m_EditorClassIdentifier: 
-  _seed: 1111406159
+  _seed: 766148171
   _resolutionX: 257
   _resolutionZ: 257
   _worldSizeX: 600
   _worldSizeZ: 600
-  _heightScale: 26
+  _heightScale: 35
   _seaLevel: 1.15
   _noiseScale: 55
   _octaves: 7
@@ -42,7 +42,7 @@ MonoBehaviour:
   _grasslandColor: {r: 0.05, g: 0.18, b: 0.06, a: 1}
   _rockColor: {r: 0.2, g: 0.2, b: 0.19, a: 1}
   _mountainColor: {r: 0.3, g: 0.3, b: 0.27, a: 1}
-  _generateProps: 1
+  _generateProps: 0
   _propLibrary: {fileID: 11400000, guid: f10c2632cd2a4e1ea9d9458b3bd12001, type: 2}
   _treeDensity: 5
   _rockDensity: 6
@@ -57,4 +57,4 @@ MonoBehaviour:
   _driftwoodMinSpacing: 9
   _propMinScale: 0.75
   _propMaxScale: 1.45
-  _updateMeshCollider: 0
+  _updateMeshCollider: 1

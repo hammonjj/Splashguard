@@ -15,6 +15,8 @@ namespace BitBox.Library.Constants
     public const string ActionAction = "Action";
     public const string JumpAction = "Jump";
     public const string FireAction = "Fire";
+    public const string HoistAction = "Hoist";
+    public const string SuctionAction = "Suction";
     public const string ZoomAction = "Zoom";
     public const string AimAction = "Aim";
     public const string ThrottleAction = "Throttle";

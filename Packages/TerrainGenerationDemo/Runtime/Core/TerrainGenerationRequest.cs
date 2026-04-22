@@ -6,6 +6,8 @@ namespace BitBox.TerrainGeneration.Core
     {
         public const int MinResolution = 2;
         public const int MaxReasonableResolution = 4097;
+        public const float DefaultPoolBorderWidth = 0.045f;
+        public const float DefaultPoolBorderHeight = 0.35f;
 
         public readonly int Seed;
         public readonly int ResolutionX;
@@ -26,6 +28,14 @@ namespace BitBox.TerrainGeneration.Core
         public readonly float IslandRadius;
         public readonly float MinIslandSeparation;
         public readonly MultiIslandBlendMode BlendMode;
+        public readonly TerrainUnderwaterProfile UnderwaterProfile;
+        public readonly float FlatFloorDepth;
+        public readonly float BasinWidth;
+        public readonly float BasinDepth;
+        public readonly float BasinCornerRadius;
+        public readonly float BasinEdgeSoftness;
+        public readonly float PoolBorderWidth;
+        public readonly float PoolBorderHeight;
 
         public TerrainGenerationRequest(
             int seed,
@@ -47,6 +57,122 @@ namespace BitBox.TerrainGeneration.Core
             float islandRadius,
             float minIslandSeparation,
             MultiIslandBlendMode blendMode)
+            : this(
+                seed,
+                resolutionX,
+                resolutionZ,
+                worldSizeX,
+                worldSizeZ,
+                heightScale,
+                seaLevel,
+                noiseScale,
+                octaves,
+                persistence,
+                lacunarity,
+                noiseMode,
+                maskMode,
+                falloffStrength,
+                falloffExponent,
+                islandCount,
+                islandRadius,
+                minIslandSeparation,
+                blendMode,
+                TerrainUnderwaterProfile.Natural,
+                flatFloorDepth: 2f,
+                basinWidth: 0.74f,
+                basinDepth: 0.56f,
+                basinCornerRadius: 0.18f,
+                basinEdgeSoftness: 0.035f,
+                poolBorderWidth: DefaultPoolBorderWidth,
+                poolBorderHeight: DefaultPoolBorderHeight)
+        {
+        }
+
+        public TerrainGenerationRequest(
+            int seed,
+            int resolutionX,
+            int resolutionZ,
+            float worldSizeX,
+            float worldSizeZ,
+            float heightScale,
+            float seaLevel,
+            float noiseScale,
+            int octaves,
+            float persistence,
+            float lacunarity,
+            TerrainNoiseMode noiseMode,
+            TerrainMaskMode maskMode,
+            float falloffStrength,
+            float falloffExponent,
+            int islandCount,
+            float islandRadius,
+            float minIslandSeparation,
+            MultiIslandBlendMode blendMode,
+            TerrainUnderwaterProfile underwaterProfile,
+            float flatFloorDepth,
+            float basinWidth,
+            float basinDepth,
+            float basinCornerRadius,
+            float basinEdgeSoftness)
+            : this(
+                seed,
+                resolutionX,
+                resolutionZ,
+                worldSizeX,
+                worldSizeZ,
+                heightScale,
+                seaLevel,
+                noiseScale,
+                octaves,
+                persistence,
+                lacunarity,
+                noiseMode,
+                maskMode,
+                falloffStrength,
+                falloffExponent,
+                islandCount,
+                islandRadius,
+                minIslandSeparation,
+                blendMode,
+                underwaterProfile,
+                flatFloorDepth,
+                basinWidth,
+                basinDepth,
+                basinCornerRadius,
+                basinEdgeSoftness,
+                DefaultPoolBorderWidth,
+                DefaultPoolBorderHeight)
+        {
+        }
+
+        public TerrainGenerationRequest(
+            int seed,
+            int resolutionX,
+            int resolutionZ,
+            float worldSizeX,
+            float worldSizeZ,
+            float heightScale,
+            float seaLevel,
+            float noiseScale,
+            int octaves,
+            float persistence,
+            float lacunarity,
+            TerrainNoiseMode noiseMode,
+            TerrainMaskMode maskMode,
+            float falloffStrength,
+            float falloffExponent,
+            int islandCount,
+            float islandRadius,
+            float minIslandSeparation,
+            MultiIslandBlendMode blendMode,
+            TerrainUnderwaterProfile underwaterProfile,
+            float flatFloorDepth,
+            float basinWidth,
+            float basinDepth,
+            float basinCornerRadius,
+            float basinEdgeSoftness,
+            float poolBorderWidth,
+            float poolBorderHeight)
         {
             Seed = seed;
             ResolutionX = Mathf.Clamp(resolutionX, MinResolution, MaxReasonableResolution);
@@ -67,6 +193,14 @@ namespace BitBox.TerrainGeneration.Core
             IslandRadius = Mathf.Clamp(islandRadius, 0.01f, 2f);
             MinIslandSeparation = Mathf.Clamp01(minIslandSeparation);
             BlendMode = blendMode;
+            UnderwaterProfile = underwaterProfile;
+            FlatFloorDepth = Mathf.Max(0.001f, flatFloorDepth);
+            BasinWidth = Mathf.Clamp(basinWidth, 0.01f, 1.5f);
+            BasinDepth = Mathf.Clamp(basinDepth, 0.01f, 1.5f);
+            BasinCornerRadius = Mathf.Clamp01(basinCornerRadius);
+            BasinEdgeSoftness = Mathf.Clamp(basinEdgeSoftness, 0.001f, 0.5f);
+            PoolBorderWidth = Mathf.Clamp(poolBorderWidth, 0f, 0.5f);
+            PoolBorderHeight = Mathf.Max(0f, poolBorderHeight);
         }
 
         public static TerrainGenerationRequest Default => new(

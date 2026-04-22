@@ -1,6 +1,8 @@
 #if UNITY_EDITOR
 using System.Linq;
+using System.Reflection;
 using Bitbox;
+using Bitbox.Splashguard.Nautical.Crane;
 using Bitbox.Toymageddon.Nautical;
 using NUnit.Framework;
 using NUnitAssert = NUnit.Framework.Assert;
@@ -83,6 +85,24 @@ namespace BitBox.Toymageddon.Tests.Editor
         }
 
         [Test]
+        public void InvisibleAnchorAcceleration_IsPlanarAndClamped()
+        {
+            Vector3 acceleration = SimpleFloaterUtility.CalculateAnchorAcceleration(
+                holdPoint: Vector3.zero,
+                currentPosition: new Vector3(10f, 5f, 0f),
+                velocity: new Vector3(2f, -20f, 0f),
+                slackRadius: 0.35f,
+                horizontalStopTime: 4f,
+                holdSpringAcceleration: 1.25f,
+                maxAnchorAcceleration: 6.5f);
+
+            AssertFinite(acceleration);
+            NUnitAssert.AreEqual(0f, acceleration.y, 0.0001f);
+            NUnitAssert.LessOrEqual(acceleration.magnitude, 6.5f + 0.0001f);
+            NUnitAssert.Less(acceleration.x, 0f);
+        }
+
+        [Test]
         public void MissingWaterSampleMath_ProducesNoForce()
         {
             float acceleration = SimpleFloaterUtility.CalculateBuoyancyAcceleration(
@@ -118,8 +138,43 @@ namespace BitBox.Toymageddon.Tests.Editor
 
             Transform floater = cratePrefab.transform.Find("Floater");
             NUnitAssert.IsNotNull(floater, "FloatingCrate should have a Floater child.");
-            NUnitAssert.IsNotNull(floater.GetComponent<SimpleFloater>());
+            SimpleFloater simpleFloater = floater.GetComponent<SimpleFloater>();
+            NUnitAssert.IsNotNull(simpleFloater);
             NUnitAssert.GreaterOrEqual(CountFloatPointChildren(floater), 4);
+
+            SerializedObject serializedFloater = new(simpleFloater);
+            NUnitAssert.IsTrue(
+                serializedFloater.FindProperty("_anchorInPlace").boolValue,
+                "FloatingCrate should use the SimpleFloater invisible anchor until it is grabbed.");
+            NUnitAssert.IsTrue(
+                serializedFloater.FindProperty("_releaseAnchorWhenGrabbed").boolValue,
+                "FloatingCrate should release its invisible anchor once grabbed by the crane.");
+        }
+
+        [Test]
+        public void InvisibleAnchor_ReleasesWhenPickupTargetIsGrabbed()
+        {
+            GameObject root = new("AnchoredFloatingPickup");
+            root.AddComponent<Rigidbody>();
+            CranePickupTarget pickupTarget = root.AddComponent<CranePickupTarget>();
+            GameObject floaterObject = new("Floater");
+            floaterObject.transform.SetParent(root.transform);
+            SimpleFloater floater = floaterObject.AddComponent<SimpleFloater>();
+
+            try
+            {
+                floater.DropInvisibleAnchor();
+                NUnitAssert.IsTrue(floater.IsInvisibleAnchorActive);
+
+                pickupTarget.SetGrabbedByCrane(true);
+                InvokePrivate(floater, "ReleaseInvisibleAnchorIfGrabbed");
+
+                NUnitAssert.IsFalse(floater.IsInvisibleAnchorActive);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
         }
 
         [Test]
@@ -169,6 +224,15 @@ namespace BitBox.Toymageddon.Tests.Editor
             NUnitAssert.IsTrue(float.IsFinite(value.x));
             NUnitAssert.IsTrue(float.IsFinite(value.y));
             NUnitAssert.IsTrue(float.IsFinite(value.z));
+        }
+
+        private static void InvokePrivate(object target, string methodName)
+        {
+            MethodInfo method = target.GetType().GetMethod(
+                methodName,
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            NUnitAssert.IsNotNull(method, $"Expected method '{methodName}' on {target.GetType().Name}.");
+            method.Invoke(target, null);
         }
     }
 }

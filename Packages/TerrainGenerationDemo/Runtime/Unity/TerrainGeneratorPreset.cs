@@ -57,6 +57,32 @@ namespace BitBox.TerrainGeneration.Unity
         [SerializeField, Min(0.01f), Tooltip("Curve applied to the falloff mask. Higher values keep more of the center high while concentrating falloff near edges.")]
         private float _falloffExponent = 1.8f;
 
+        [Header("Water Park Basin")]
+        [SerializeField, Range(0.01f, 1.5f), Tooltip("Normalized width of the rounded basin footprint when Mask Mode is Rounded Basin.")]
+        private float _basinWidth = 0.74f;
+
+        [SerializeField, Range(0.01f, 1.5f), Tooltip("Normalized depth of the rounded basin footprint when Mask Mode is Rounded Basin.")]
+        private float _basinDepth = 0.56f;
+
+        [SerializeField, Range(0f, 1f), Tooltip("Normalized corner radius used by the rounded basin mask.")]
+        private float _basinCornerRadius = 0.18f;
+
+        [SerializeField, Range(0.001f, 0.5f), Tooltip("Normalized softness of the basin edge. Lower values make sharper pool walls.")]
+        private float _basinEdgeSoftness = 0.035f;
+
+        [SerializeField, Range(0f, 0.5f), Tooltip("Normalized width of the raised pool border generated around a rounded basin.")]
+        private float _poolBorderWidth = TerrainGenerationRequest.DefaultPoolBorderWidth;
+
+        [SerializeField, Min(0f), Tooltip("Height above sea level for the raised pool border generated around a rounded basin.")]
+        private float _poolBorderHeight = TerrainGenerationRequest.DefaultPoolBorderHeight;
+
+        [Header("Underwater")]
+        [SerializeField, Tooltip("How terrain below sea level is shaped after the initial height pass.")]
+        private TerrainUnderwaterProfile _underwaterProfile = TerrainUnderwaterProfile.Natural;
+
+        [SerializeField, Min(0.001f), Tooltip("Depth below sea level used when Underwater Profile is Flat Floor.")]
+        private float _flatFloorDepth = 2f;
+
         [Header("Archipelago")]
         [SerializeField, Range(1, 64), Tooltip("Number of island centers generated when Mask Mode is Archipelago.")]
         private int _islandCount = 1;
@@ -182,7 +208,15 @@ namespace BitBox.TerrainGeneration.Unity
                 _islandCount,
                 _islandRadius,
                 _minIslandSeparation,
-                _blendMode);
+                _blendMode,
+                _underwaterProfile,
+                _flatFloorDepth,
+                _basinWidth,
+                _basinDepth,
+                _basinCornerRadius,
+                _basinEdgeSoftness,
+                _poolBorderWidth,
+                _poolBorderHeight);
         }
 
         public TerrainZoneSettings ToZoneSettings()

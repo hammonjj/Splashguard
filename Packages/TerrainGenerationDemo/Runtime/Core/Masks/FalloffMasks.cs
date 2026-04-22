@@ -44,4 +44,40 @@ namespace BitBox.TerrainGeneration.Core.Masks
             return Mathf.Pow(falloff, _exponent);
         }
     }
+
+    public sealed class RoundedBasinMask : IMask2D
+    {
+        private readonly float _halfWidth;
+        private readonly float _halfDepth;
+        private readonly float _cornerRadius;
+        private readonly float _edgeSoftness;
+        private readonly float _exponent;
+
+        public RoundedBasinMask(
+            float width,
+            float depth,
+            float cornerRadius,
+            float edgeSoftness,
+            float exponent)
+        {
+            _halfWidth = Mathf.Clamp(width, 0.01f, 1.5f) * 0.5f;
+            _halfDepth = Mathf.Clamp(depth, 0.01f, 1.5f) * 0.5f;
+            _cornerRadius = Mathf.Min(Mathf.Clamp01(cornerRadius), Mathf.Min(_halfWidth, _halfDepth));
+            _edgeSoftness = Mathf.Clamp(edgeSoftness, 0.001f, 0.5f);
+            _exponent = Mathf.Max(0.01f, exponent);
+        }
+
+        public float Evaluate(float u, float v)
+        {
+            float px = Mathf.Abs(u - 0.5f) - (_halfWidth - _cornerRadius);
+            float pz = Mathf.Abs(v - 0.5f) - (_halfDepth - _cornerRadius);
+            float outsideX = Mathf.Max(px, 0f);
+            float outsideZ = Mathf.Max(pz, 0f);
+            float outsideDistance = Mathf.Sqrt(outsideX * outsideX + outsideZ * outsideZ);
+            float insideDistance = Mathf.Min(Mathf.Max(px, pz), 0f);
+            float signedDistance = outsideDistance + insideDistance - _cornerRadius;
+            float basinAmount = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(_edgeSoftness, -_edgeSoftness, signedDistance));
+            return Mathf.Pow(Mathf.Clamp01(basinAmount), _exponent);
+        }
+    }
 }

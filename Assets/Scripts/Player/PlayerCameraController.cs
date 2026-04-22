@@ -4,7 +4,7 @@ using BitBox.Library.CameraUtils;
 using BitBox.Library.Constants;
 using BitBox.Library.Constants.Enums;
 using BitBox.Library.Eventing.GlobalEvents;
-using Bitbox.Toymageddon.Nautical;
+using Bitbox.Splashguard.Nautical;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -18,6 +18,7 @@ namespace Bitbox
     {
         private const string ThirdPersonCameraName = "ThirdPersonOrbitCamera";
         private const string HelmCameraName = "HelmOrbitCamera";
+        private const string CraneControlCameraName = "CraneControlCamera";
         private const string BoatGunnerCameraName = "BoatGunnerCamera";
         private const string LookOrbitXAxisName = "Look Orbit X";
         private const string LookOrbitYAxisName = "Look Orbit Y";
@@ -32,29 +33,36 @@ namespace Bitbox
         [SerializeField, Min(0f)] private float _mouseLookSensitivity = 0.2f;
         [SerializeField, Min(0f)] private float _gamepadLookSensitivity = 180f;
         [SerializeField, Min(0f)] private float _helmLookSensitivityMultiplier = 1.35f;
+        [SerializeField, Min(0f)] private float _craneLookSensitivityMultiplier = 1.35f;
 
         private PlayerInput _playerInput;
         private PlayerDataReference _playerDataReference;
         private CinemachineBrain _cinemachineBrain;
         private CinemachineCamera _thirdPersonCamera;
         private CinemachineCamera _helmCamera;
+        private CinemachineCamera _craneCamera;
         private CinemachineCamera _gunnerCamera;
         private CinemachineOrbitalFollow _thirdPersonOrbitalFollow;
         private CinemachineOrbitalFollow _helmOrbitalFollow;
+        private CinemachineOrbitalFollow _craneOrbitalFollow;
         private CinemachineFollow _gunnerFollow;
         private CinemachineInputAxisController _thirdPersonInputController;
         private CinemachineInputAxisController _helmInputController;
+        private CinemachineInputAxisController _craneInputController;
         private MacroSceneType _currentMacroScene = MacroSceneType.None;
         private bool _isPaused;
         private bool _needsThirdPersonOrbitAlignment = true;
         private bool _needsHelmOrbitAlignment;
+        private bool _needsCraneOrbitAlignment;
         private bool _prioritiesInitialized;
         private int _thirdPersonBasePriority;
         private int _helmBasePriority;
+        private int _craneBasePriority;
         private int _gunnerBasePriority;
         private int _activePriority;
         private HelmControl _activeHelm;
         private DeckMountedGunControl _activeGun;
+        private CargoBayControls _activeCargoBay;
         private Transform _runtimeHelmLookAtTarget;
         private CameraMode _activeCameraMode = CameraMode.ThirdPerson;
         private string _lastControlScheme;
@@ -69,7 +77,7 @@ namespace Bitbox
             ActivateThirdPersonCamera();
             QueueThirdPersonOrbitAlignment();
             LogInfo(
-                $"Camera controller initialized. playerIndex={_playerInput.playerIndex}, scheme={_playerInput.currentControlScheme}, gameplayCamera={GameplayCamera.name}, thirdPersonVcam={_thirdPersonCamera.name}, helmVcam={_helmCamera.name}, gunnerVcam={_gunnerCamera.name}, cameraTarget={CameraTarget.name}, channel={ResolveOutputChannel(_playerInput.playerIndex)}.");
+                $"Camera controller initialized. playerIndex={_playerInput.playerIndex}, scheme={_playerInput.currentControlScheme}, gameplayCamera={GameplayCamera.name}, thirdPersonVcam={_thirdPersonCamera.name}, helmVcam={_helmCamera.name}, craneVcam={_craneCamera.name}, gunnerVcam={_gunnerCamera.name}, cameraTarget={CameraTarget.name}, channel={ResolveOutputChannel(_playerInput.playerIndex)}.");
         }
 
         protected override void OnEnabled()
@@ -90,6 +98,8 @@ namespace Bitbox
             _globalMessageBus.Subscribe<PlayerExitedHelmEvent>(OnPlayerExitedHelm);
             _globalMessageBus.Subscribe<PlayerEnteredBoatGunEvent>(OnPlayerEnteredBoatGun);
             _globalMessageBus.Subscribe<PlayerExitedBoatGunEvent>(OnPlayerExitedBoatGun);
+            _globalMessageBus.Subscribe<PlayerEnteredCraneEvent>(OnPlayerEnteredCrane);
+            _globalMessageBus.Subscribe<PlayerExitedCraneEvent>(OnPlayerExitedCrane);
 
             if (_currentMacroScene.IsGameplayScene())
             {
@@ -112,6 +122,8 @@ namespace Bitbox
             _globalMessageBus.Unsubscribe<PlayerExitedHelmEvent>(OnPlayerExitedHelm);
             _globalMessageBus.Unsubscribe<PlayerEnteredBoatGunEvent>(OnPlayerEnteredBoatGun);
             _globalMessageBus.Unsubscribe<PlayerExitedBoatGunEvent>(OnPlayerExitedBoatGun);
+            _globalMessageBus.Unsubscribe<PlayerEnteredCraneEvent>(OnPlayerEnteredCrane);
+            _globalMessageBus.Unsubscribe<PlayerExitedCraneEvent>(OnPlayerExitedCrane);
         }
 
         protected override void OnUpdated()
@@ -134,12 +146,28 @@ namespace Bitbox
                 _needsHelmOrbitAlignment = false;
             }
 
+            if (_needsCraneOrbitAlignment)
+            {
+                AlignCraneOrbitToTrackingTarget();
+                _needsCraneOrbitAlignment = false;
+            }
+
             if (_currentMacroScene.IsGameplayScene()
                 && !_isPaused
                 && _activeCameraMode == CameraMode.Helm
                 && !TryResolveActiveHelm(out _))
             {
                 ActivateThirdPersonCamera();
+                return;
+            }
+
+            if (_currentMacroScene.IsGameplayScene()
+                && !_isPaused
+                && _activeCameraMode == CameraMode.Crane
+                && !TryResolveActiveCargoBay(out _))
+            {
+                ActivateThirdPersonCamera();
+                return;
             }
 
             if (_currentMacroScene.IsGameplayScene()
@@ -234,6 +262,28 @@ namespace Bitbox
             ActivateThirdPersonCamera();
         }
 
+        private void OnPlayerEnteredCrane(PlayerEnteredCraneEvent @event)
+        {
+            if (!IsLocalPlayerEvent(@event.PlayerIndex))
+            {
+                return;
+            }
+
+            LogInfo($"Received crane-enter event. playerIndex={@event.PlayerIndex}.");
+            ActivateCraneCamera();
+        }
+
+        private void OnPlayerExitedCrane(PlayerExitedCraneEvent @event)
+        {
+            if (!IsLocalPlayerEvent(@event.PlayerIndex))
+            {
+                return;
+            }
+
+            LogInfo($"Received crane-exit event. playerIndex={@event.PlayerIndex}.");
+            ActivateThirdPersonCamera();
+        }
+
         private void CacheReferences()
         {
             _playerInput ??= GetComponent<PlayerInput>();
@@ -245,14 +295,18 @@ namespace Bitbox
                 CinemachineCamera[] authoredCameras = CameraRigRoot.GetComponentsInChildren<CinemachineCamera>(true);
                 _thirdPersonCamera ??= FindAuthoredCamera(authoredCameras, ThirdPersonCameraName);
                 _helmCamera ??= FindAuthoredCamera(authoredCameras, HelmCameraName);
+                _craneCamera ??= FindAuthoredCamera(authoredCameras, CraneControlCameraName);
                 _gunnerCamera ??= FindAuthoredCamera(authoredCameras, BoatGunnerCameraName);
             }
 
+            _craneCamera ??= CreateRuntimeCraneCameraFromHelm(_helmCamera);
             _thirdPersonOrbitalFollow ??= _thirdPersonCamera != null ? _thirdPersonCamera.GetComponent<CinemachineOrbitalFollow>() : null;
             _helmOrbitalFollow ??= _helmCamera != null ? _helmCamera.GetComponent<CinemachineOrbitalFollow>() : null;
+            _craneOrbitalFollow ??= _craneCamera != null ? _craneCamera.GetComponent<CinemachineOrbitalFollow>() : null;
             _gunnerFollow ??= _gunnerCamera != null ? _gunnerCamera.GetComponent<CinemachineFollow>() : null;
             _thirdPersonInputController ??= _thirdPersonCamera != null ? _thirdPersonCamera.GetComponent<CinemachineInputAxisController>() : null;
             _helmInputController ??= _helmCamera != null ? _helmCamera.GetComponent<CinemachineInputAxisController>() : null;
+            _craneInputController ??= _craneCamera != null ? _craneCamera.GetComponent<CinemachineInputAxisController>() : null;
 
             Assert.IsNotNull(_playerInput, $"{nameof(PlayerCameraController)} requires a {nameof(PlayerInput)}.");
             Assert.IsNotNull(_playerDataReference, $"{nameof(PlayerCameraController)} requires a {nameof(PlayerDataReference)}.");
@@ -262,19 +316,25 @@ namespace Bitbox
             Assert.IsNotNull(CameraRigRoot, $"{nameof(PlayerCameraController)} requires the gameplay camera to have a parent transform.");
             Assert.IsNotNull(_thirdPersonCamera, $"{nameof(PlayerCameraController)} requires an authored {ThirdPersonCameraName} under the gameplay camera rig.");
             Assert.IsNotNull(_helmCamera, $"{nameof(PlayerCameraController)} requires an authored {HelmCameraName} under the gameplay camera rig.");
+            Assert.IsNotNull(_craneCamera, $"{nameof(PlayerCameraController)} requires an authored {CraneControlCameraName} under the gameplay camera rig or a helm camera to clone.");
             Assert.IsNotNull(_gunnerCamera, $"{nameof(PlayerCameraController)} requires an authored {BoatGunnerCameraName} under the gameplay camera rig.");
             Assert.IsNotNull(_thirdPersonOrbitalFollow, $"{nameof(PlayerCameraController)} requires an authored {nameof(CinemachineOrbitalFollow)} on {ThirdPersonCameraName}.");
             Assert.IsNotNull(_helmOrbitalFollow, $"{nameof(PlayerCameraController)} requires an authored {nameof(CinemachineOrbitalFollow)} on {HelmCameraName}.");
+            Assert.IsNotNull(_craneOrbitalFollow, $"{nameof(PlayerCameraController)} requires an authored {nameof(CinemachineOrbitalFollow)} on {CraneControlCameraName}.");
             Assert.IsNotNull(_gunnerFollow, $"{nameof(PlayerCameraController)} requires an authored {nameof(CinemachineFollow)} on {BoatGunnerCameraName}.");
             Assert.IsNotNull(_thirdPersonInputController, $"{nameof(PlayerCameraController)} requires an authored {nameof(CinemachineInputAxisController)} on {ThirdPersonCameraName}.");
             Assert.IsNotNull(_helmInputController, $"{nameof(PlayerCameraController)} requires an authored {nameof(CinemachineInputAxisController)} on {HelmCameraName}.");
+            Assert.IsNotNull(_craneInputController, $"{nameof(PlayerCameraController)} requires an authored {nameof(CinemachineInputAxisController)} on {CraneControlCameraName}.");
 
             if (!_prioritiesInitialized)
             {
                 _thirdPersonBasePriority = _thirdPersonCamera.Priority.Value;
                 _helmBasePriority = _helmCamera.Priority.Value;
+                _craneBasePriority = _craneCamera.Priority.Value;
                 _gunnerBasePriority = _gunnerCamera.Priority.Value;
-                _activePriority = Mathf.Max(_thirdPersonBasePriority, Mathf.Max(_helmBasePriority, _gunnerBasePriority)) + 1;
+                _activePriority = Mathf.Max(
+                    Mathf.Max(_thirdPersonBasePriority, _helmBasePriority),
+                    Mathf.Max(_craneBasePriority, _gunnerBasePriority)) + 1;
                 _prioritiesInitialized = true;
             }
         }
@@ -285,6 +345,7 @@ namespace Bitbox
             _cinemachineBrain.ChannelMask = outputChannel;
             ConfigureCamera(outputChannel, _thirdPersonCamera, _thirdPersonInputController);
             ConfigureCamera(outputChannel, _helmCamera, _helmInputController);
+            ConfigureCamera(outputChannel, _craneCamera, _craneInputController);
             ConfigureCamera(outputChannel, _gunnerCamera, null);
         }
 
@@ -327,11 +388,13 @@ namespace Bitbox
             bool useGamepadTuning = string.Equals(_playerInput.currentControlScheme, Strings.GamepadControlScheme, StringComparison.Ordinal);
             float baseSensitivity = useGamepadTuning ? _gamepadLookSensitivity : _mouseLookSensitivity;
             float helmSensitivity = baseSensitivity * _helmLookSensitivityMultiplier;
+            float craneSensitivity = baseSensitivity * _craneLookSensitivityMultiplier;
             bool cancelDeltaTime = !useGamepadTuning;
 
             ApplyLookInputTuning(_thirdPersonInputController, baseSensitivity, cancelDeltaTime);
             ApplyLookInputTuning(_helmInputController, helmSensitivity, cancelDeltaTime);
-            LogInputDiagnostics(reason, baseSensitivity, helmSensitivity, cancelDeltaTime);
+            ApplyLookInputTuning(_craneInputController, craneSensitivity, cancelDeltaTime);
+            LogInputDiagnostics(reason, baseSensitivity, helmSensitivity, craneSensitivity, cancelDeltaTime);
         }
 
         private static void ApplyLookInputTuning(
@@ -364,7 +427,12 @@ namespace Bitbox
             controller.Input.CancelDeltaTime = cancelDeltaTime;
         }
 
-        private void LogInputDiagnostics(string reason, float thirdPersonSensitivity, float helmSensitivity, bool cancelDeltaTime)
+        private void LogInputDiagnostics(
+            string reason,
+            float thirdPersonSensitivity,
+            float helmSensitivity,
+            float craneSensitivity,
+            bool cancelDeltaTime)
         {
             InputAction rotateCameraAction = _playerInput != null && _playerInput.currentActionMap != null
                 ? _playerInput.currentActionMap.FindAction(Strings.RotateCameraAction, throwIfNotFound: false)
@@ -374,9 +442,11 @@ namespace Bitbox
             float thirdPersonLookY = GetControllerInputValue(_thirdPersonInputController, LookOrbitYAxisName);
             float helmLookX = GetControllerInputValue(_helmInputController, LookOrbitXAxisName);
             float helmLookY = GetControllerInputValue(_helmInputController, LookOrbitYAxisName);
+            float craneLookX = GetControllerInputValue(_craneInputController, LookOrbitXAxisName);
+            float craneLookY = GetControllerInputValue(_craneInputController, LookOrbitYAxisName);
 
             LogDebug(
-                $"Camera input diagnostics [{reason}]. playerIndex={_playerInput.playerIndex}, scheme={_playerInput.currentControlScheme ?? "None"}, actionMap={_playerInput.currentActionMap?.name ?? "None"}, activeCameraMode={_activeCameraMode}, rotateActionId={rotateCameraAction?.id.ToString() ?? "None"}, rotateActionEnabled={(rotateCameraAction != null && rotateCameraAction.enabled)}, rotateValue=({rotateCameraValue.x:0.###}, {rotateCameraValue.y:0.###}), thirdPersonSensitivity={thirdPersonSensitivity:0.###}, helmSensitivity={helmSensitivity:0.###}, cancelDeltaTime={cancelDeltaTime}, thirdPersonInput=({thirdPersonLookX:0.###}, {thirdPersonLookY:0.###}), helmInput=({helmLookX:0.###}, {helmLookY:0.###}).");
+                $"Camera input diagnostics [{reason}]. playerIndex={_playerInput.playerIndex}, scheme={_playerInput.currentControlScheme ?? "None"}, actionMap={_playerInput.currentActionMap?.name ?? "None"}, activeCameraMode={_activeCameraMode}, rotateActionId={rotateCameraAction?.id.ToString() ?? "None"}, rotateActionEnabled={(rotateCameraAction != null && rotateCameraAction.enabled)}, rotateValue=({rotateCameraValue.x:0.###}, {rotateCameraValue.y:0.###}), thirdPersonSensitivity={thirdPersonSensitivity:0.###}, helmSensitivity={helmSensitivity:0.###}, craneSensitivity={craneSensitivity:0.###}, cancelDeltaTime={cancelDeltaTime}, thirdPersonInput=({thirdPersonLookX:0.###}, {thirdPersonLookY:0.###}), helmInput=({helmLookX:0.###}, {helmLookY:0.###}), craneInput=({craneLookX:0.###}, {craneLookY:0.###}).");
         }
 
         private static float GetControllerInputValue(CinemachineInputAxisController inputController, string axisName)
@@ -395,6 +465,11 @@ namespace Bitbox
             _needsHelmOrbitAlignment = true;
         }
 
+        private void QueueCraneOrbitAlignment()
+        {
+            _needsCraneOrbitAlignment = true;
+        }
+
         private void AlignThirdPersonOrbitToVisualFacingTarget()
         {
             SetCameraTargets(_thirdPersonCamera, CameraTarget, CameraTarget);
@@ -406,18 +481,44 @@ namespace Bitbox
 
         private void AlignHelmOrbitToTrackingTarget()
         {
-            if (_activeHelm == null)
+            Transform trackingTarget = null;
+            if (_activeCameraMode == CameraMode.Helm && _activeHelm != null)
+            {
+                trackingTarget = _activeHelm.CameraAnchors != null
+                    ? _activeHelm.CameraAnchors.TrackingTarget
+                    : _activeHelm.transform;
+            }
+
+            if (trackingTarget == null)
             {
                 return;
             }
 
-            Transform trackingTarget = _activeHelm.CameraAnchors != null
-                ? _activeHelm.CameraAnchors.TrackingTarget
-                : _activeHelm.transform;
             float yaw = NormalizeAngle(trackingTarget.eulerAngles.y);
             _helmOrbitalFollow.HorizontalAxis.Value = _helmOrbitalFollow.HorizontalAxis.ClampValue(yaw);
             _helmOrbitalFollow.VerticalAxis.Value = _helmOrbitalFollow.VerticalAxis.ClampValue(_helmOrbitalFollow.VerticalAxis.Center);
             _helmCamera.PreviousStateIsValid = false;
+        }
+
+        private void AlignCraneOrbitToTrackingTarget()
+        {
+            Transform trackingTarget = null;
+            if (_activeCameraMode == CameraMode.Crane && _activeCargoBay != null)
+            {
+                trackingTarget = _activeCargoBay.CameraAnchors != null
+                    ? _activeCargoBay.CameraAnchors.TrackingTarget
+                    : _activeCargoBay.transform;
+            }
+
+            if (trackingTarget == null)
+            {
+                return;
+            }
+
+            float yaw = NormalizeAngle(trackingTarget.eulerAngles.y);
+            _craneOrbitalFollow.HorizontalAxis.Value = _craneOrbitalFollow.HorizontalAxis.ClampValue(yaw);
+            _craneOrbitalFollow.VerticalAxis.Value = _craneOrbitalFollow.VerticalAxis.ClampValue(_craneOrbitalFollow.VerticalAxis.Center);
+            _craneCamera.PreviousStateIsValid = false;
         }
 
         private void RefreshCameraMode()
@@ -434,12 +535,19 @@ namespace Bitbox
                 return;
             }
 
+            if (TryResolveActiveCargoBay(out _))
+            {
+                ActivateCraneCamera();
+                return;
+            }
+
             ActivateThirdPersonCamera();
         }
 
         private void ActivateHelmCamera()
         {
             _activeGun = null;
+            _activeCargoBay = null;
 
             if (!TryResolveActiveHelm(out HelmControl helm))
             {
@@ -456,6 +564,7 @@ namespace Bitbox
         private void ActivateGunnerCamera()
         {
             _activeHelm = null;
+            _activeCargoBay = null;
 
             if (!TryResolveActiveGun(out DeckMountedGunControl gun))
             {
@@ -470,10 +579,28 @@ namespace Bitbox
             _gunnerCamera.PreviousStateIsValid = false;
         }
 
+        private void ActivateCraneCamera()
+        {
+            _activeHelm = null;
+            _activeGun = null;
+
+            if (!TryResolveActiveCargoBay(out CargoBayControls cargoBayControls))
+            {
+                ActivateThirdPersonCamera();
+                return;
+            }
+
+            _activeCargoBay = cargoBayControls;
+            BindCraneCameraTargets(cargoBayControls);
+            ActivateCameraMode(CameraMode.Crane);
+            QueueCraneOrbitAlignment();
+        }
+
         private void ActivateThirdPersonCamera()
         {
             _activeHelm = null;
             _activeGun = null;
+            _activeCargoBay = null;
             RestorePlayerCameraTargets();
             ActivateCameraMode(CameraMode.ThirdPerson);
         }
@@ -489,6 +616,9 @@ namespace Bitbox
             _helmCamera.Priority.Value = cameraMode == CameraMode.Helm
                 ? _activePriority
                 : _helmBasePriority;
+            _craneCamera.Priority.Value = cameraMode == CameraMode.Crane
+                ? _activePriority
+                : _craneBasePriority;
             _gunnerCamera.Priority.Value = cameraMode == CameraMode.Gunner
                 ? _activePriority
                 : _gunnerBasePriority;
@@ -506,14 +636,16 @@ namespace Bitbox
             CinemachineCamera activeCamera = cameraMode switch
             {
                 CameraMode.Helm => _helmCamera,
+                CameraMode.Crane => _craneCamera,
                 CameraMode.Gunner => _gunnerCamera,
                 _ => _thirdPersonCamera
             };
             string helmName = _activeHelm != null ? _activeHelm.name : "None";
             string gunName = _activeGun != null ? _activeGun.name : "None";
+            string craneName = _activeCargoBay != null ? _activeCargoBay.name : "None";
 
             LogInfo(
-                $"Camera mode changed. playerIndex={_playerInput.playerIndex}, from={previousCameraMode}, to={cameraMode}, activeCamera={activeCamera.name}, helm={helmName}, gun={gunName}, follow={activeCamera.Follow?.name ?? "None"}, lookAt={activeCamera.LookAt?.name ?? "None"}, thirdPersonPriority={_thirdPersonCamera.Priority.Value}, helmPriority={_helmCamera.Priority.Value}, gunnerPriority={_gunnerCamera.Priority.Value}.");
+                $"Camera mode changed. playerIndex={_playerInput.playerIndex}, from={previousCameraMode}, to={cameraMode}, activeCamera={activeCamera.name}, helm={helmName}, gun={gunName}, crane={craneName}, follow={activeCamera.Follow?.name ?? "None"}, lookAt={activeCamera.LookAt?.name ?? "None"}, thirdPersonPriority={_thirdPersonCamera.Priority.Value}, helmPriority={_helmCamera.Priority.Value}, cranePriority={_craneCamera.Priority.Value}, gunnerPriority={_gunnerCamera.Priority.Value}.");
             ApplyLookInputTuning($"camera_mode_{cameraMode}");
         }
 
@@ -549,10 +681,23 @@ namespace Bitbox
                 $"Boat-gunner camera targets [bind]. gun={gun.name}, tracking={trackingTarget?.name ?? "None"}, lookAt={lookAtTarget?.name ?? "None"}, fov={_gunnerCamera.Lens.FieldOfView:0.##}.");
         }
 
+        private void BindCraneCameraTargets(CargoBayControls cargoBayControls)
+        {
+            CameraTargetAnchors cameraAnchors = cargoBayControls.CameraAnchors;
+            Transform trackingTarget = cameraAnchors != null ? cameraAnchors.TrackingTarget : cargoBayControls.transform;
+            Transform lookAtTarget = cargoBayControls.ResolveCraneCameraLookAtTarget()
+                ?? (cameraAnchors != null ? cameraAnchors.LookAtTarget : trackingTarget);
+
+            SetCameraTargets(_craneCamera, trackingTarget, lookAtTarget);
+            LogInfo(
+                $"Crane camera targets [bind]. cargoBay={cargoBayControls.name}, tracking={trackingTarget?.name ?? "None"}, lookAt={lookAtTarget?.name ?? "None"}.");
+        }
+
         private void RestorePlayerCameraTargets()
         {
             SetCameraTargets(_thirdPersonCamera, CameraTarget, CameraTarget);
             SetCameraTargets(_helmCamera, CameraTarget, CameraTarget);
+            SetCameraTargets(_craneCamera, CameraTarget, CameraTarget);
             SetCameraTargets(_gunnerCamera, CameraTarget, CameraTarget);
         }
 
@@ -652,9 +797,49 @@ namespace Bitbox
             return DeckMountedGunControl.TryGetActiveGun(_playerInput.playerIndex, out gun) && gun != null;
         }
 
+        private bool TryResolveActiveCargoBay(out CargoBayControls cargoBayControls)
+        {
+            return CargoBayControls.TryGetActiveCargoBay(_playerInput.playerIndex, out cargoBayControls)
+                && cargoBayControls != null;
+        }
+
         private bool IsLocalPlayerEvent(int playerIndex)
         {
             return _playerInput != null && _playerInput.playerIndex == playerIndex;
+        }
+
+        private CinemachineCamera CreateRuntimeCraneCameraFromHelm(CinemachineCamera helmCamera)
+        {
+            if (helmCamera == null)
+            {
+                return null;
+            }
+
+            Transform parent = helmCamera.transform.parent;
+            if (parent != null)
+            {
+                Transform existing = parent.Find(CraneControlCameraName);
+                if (existing != null && existing.TryGetComponent(out CinemachineCamera existingCamera))
+                {
+                    return existingCamera;
+                }
+            }
+
+            GameObject clone = parent != null
+                ? Instantiate(helmCamera.gameObject, parent)
+                : Instantiate(helmCamera.gameObject);
+            clone.name = CraneControlCameraName;
+            var craneCamera = clone.GetComponent<CinemachineCamera>();
+            if (craneCamera != null)
+            {
+                craneCamera.Follow = helmCamera.Follow;
+                craneCamera.LookAt = helmCamera.LookAt;
+                craneCamera.Priority.Value = helmCamera.Priority.Value;
+                craneCamera.PreviousStateIsValid = false;
+            }
+
+            LogInfo($"Created runtime {CraneControlCameraName} by copying {helmCamera.name}. Add an authored camera with this name under the camera rig to tune crane framing separately in the prefab.");
+            return craneCamera;
         }
 
         private static CinemachineCamera FindAuthoredCamera(CinemachineCamera[] authoredCameras, string cameraName)
@@ -724,6 +909,7 @@ namespace Bitbox
         {
             ThirdPerson,
             Helm,
+            Crane,
             Gunner
         }
     }

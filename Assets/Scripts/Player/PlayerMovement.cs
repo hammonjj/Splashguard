@@ -481,7 +481,7 @@ namespace Bitbox
 
         private Vector3 ResolveSupportDisplacement()
         {
-            if (_activeSupportTransform == null)
+            if (_activeSupportTransform == null || IsPlayerVesselSupport(_activeSupportTransform))
             {
                 return Vector3.zero;
             }
@@ -492,7 +492,7 @@ namespace Bitbox
 
         private void UpdateActiveSupport(bool isGrounded, Transform supportTransform)
         {
-            if (!isGrounded || supportTransform == null)
+            if (!isGrounded || supportTransform == null || IsPlayerVesselSupport(supportTransform))
             {
                 ClearActiveSupport();
                 return;
@@ -506,6 +506,12 @@ namespace Bitbox
         {
             _activeSupportTransform = null;
             _activeSupportLocalPoint = Vector3.zero;
+        }
+
+        private static bool IsPlayerVesselSupport(Transform supportTransform)
+        {
+            return supportTransform != null
+                && supportTransform.GetComponentInParent<PlayerVesselRoot>() != null;
         }
 
         private bool TryResolveGroundSupport(out Transform supportTransform)

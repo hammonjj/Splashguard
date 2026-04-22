@@ -69,6 +69,72 @@ namespace BitBox.TerrainGeneration.Tests.Editor
         }
 
         [Test]
+        public void FlatFloorProfile_ClampsEveryUnderwaterSampleToFloorHeight()
+        {
+            TerrainGenerationRequest naturalRequest = new TerrainGenerationRequest(
+                seed: 12,
+                resolutionX: 8,
+                resolutionZ: 8,
+                worldSizeX: 8f,
+                worldSizeZ: 8f,
+                heightScale: 10f,
+                seaLevel: 0f,
+                noiseScale: 10f,
+                octaves: 1,
+                persistence: 0.5f,
+                lacunarity: 2f,
+                noiseMode: TerrainNoiseMode.Smooth,
+                maskMode: TerrainMaskMode.None,
+                falloffStrength: 0f,
+                falloffExponent: 1f,
+                islandCount: 1,
+                islandRadius: 0.4f,
+                minIslandSeparation: 0.2f,
+                blendMode: MultiIslandBlendMode.Max);
+            TerrainGenerationRequest flatFloorRequest = new TerrainGenerationRequest(
+                naturalRequest.Seed,
+                naturalRequest.ResolutionX,
+                naturalRequest.ResolutionZ,
+                naturalRequest.WorldSizeX,
+                naturalRequest.WorldSizeZ,
+                naturalRequest.HeightScale,
+                naturalRequest.SeaLevel,
+                naturalRequest.NoiseScale,
+                naturalRequest.Octaves,
+                naturalRequest.Persistence,
+                naturalRequest.Lacunarity,
+                naturalRequest.NoiseMode,
+                naturalRequest.MaskMode,
+                naturalRequest.FalloffStrength,
+                naturalRequest.FalloffExponent,
+                naturalRequest.IslandCount,
+                naturalRequest.IslandRadius,
+                naturalRequest.MinIslandSeparation,
+                naturalRequest.BlendMode,
+                TerrainUnderwaterProfile.FlatFloor,
+                flatFloorDepth: 4f,
+                basinWidth: naturalRequest.BasinWidth,
+                basinDepth: naturalRequest.BasinDepth,
+                basinCornerRadius: naturalRequest.BasinCornerRadius,
+                basinEdgeSoftness: naturalRequest.BasinEdgeSoftness);
+
+            Heightfield natural = TerrainGenerator.GenerateHeightfield(
+                naturalRequest,
+                new ConstantNoise(0.2f),
+                TerrainGenerator.BuildMask(naturalRequest));
+            Heightfield flatFloor = TerrainGenerator.GenerateHeightfield(
+                flatFloorRequest,
+                new ConstantNoise(0.2f),
+                TerrainGenerator.BuildMask(flatFloorRequest));
+
+            Assert.AreEqual(-1.5f, natural.GetHeight(0, 0), 0.0001f);
+            for (int i = 0; i < flatFloor.Heights.Length; i++)
+            {
+                Assert.AreEqual(-4f, flatFloor.Heights[i], 0.0001f);
+            }
+        }
+
+        [Test]
         public void Request_ClampsInvalidSettings()
         {
             var request = new TerrainGenerationRequest(

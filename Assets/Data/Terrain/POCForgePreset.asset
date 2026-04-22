@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0df63ea83be348958a0eab42b3bd2b19, type: 3}
   m_Name: POCForgePreset
   m_EditorClassIdentifier: BitBox.TerrainGeneration.Unity::BitBox.TerrainGeneration.Unity.TerrainGeneratorPreset
-  _seed: -996131168
+  _seed: 754950610
   _resolutionX: 256
   _resolutionZ: 256
   _worldSizeX: 300
   _worldSizeZ: 300
-  _heightScale: 10
+  _heightScale: 30
   _seaLevel: 0
   _noiseScale: 161.61
   _octaves: 12
@@ -36,6 +36,12 @@ MonoBehaviour:
   _rockSlopeThreshold: 4.48
   _mountainElevationThreshold: 0.771
   _zoneColorSmoothingPasses: 2
+  _deepWaterColor: {r: 0.02, g: 0.08, b: 0.18, a: 1}
+  _shallowWaterColor: {r: 0.06, g: 0.48, b: 0.58, a: 1}
+  _beachColor: {r: 0.83, g: 0.76, b: 0.55, a: 1}
+  _grasslandColor: {r: 0.22, g: 0.54, b: 0.22, a: 1}
+  _rockColor: {r: 0.42, g: 0.42, b: 0.4, a: 1}
+  _mountainColor: {r: 0.72, g: 0.72, b: 0.68, a: 1}
   _generateProps: 0
   _propLibrary: {fileID: 0}
   _treeDensity: 9
@@ -51,4 +57,4 @@ MonoBehaviour:
   _driftwoodMinSpacing: 5
   _propMinScale: 0.75
   _propMaxScale: 1.35
-  _updateMeshCollider: 0
+  _updateMeshCollider: 1

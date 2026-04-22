@@ -11,6 +11,7 @@ namespace BitBox.TerrainGeneration.Tests.Editor
     public sealed class PresetPreviewExportTests
     {
         private const string TestOutputFolder = "Assets/TerrainGenerationDemoTestOutput";
+        private const string DefaultWaterParkPresetPath = "Packages/com.bitboxarcade.terraforge/Assets/DefaultWaterParkPreset.asset";
 
         [TearDown]
         public void TearDown()
@@ -31,6 +32,14 @@ namespace BitBox.TerrainGeneration.Tests.Editor
                 serializedPreset.FindProperty("_seed").intValue = 9001;
                 serializedPreset.FindProperty("_resolutionX").intValue = 17;
                 serializedPreset.FindProperty("_resolutionZ").intValue = 19;
+                serializedPreset.FindProperty("_underwaterProfile").enumValueIndex = (int)TerrainUnderwaterProfile.FlatFloor;
+                serializedPreset.FindProperty("_flatFloorDepth").floatValue = 3.5f;
+                serializedPreset.FindProperty("_basinWidth").floatValue = 0.64f;
+                serializedPreset.FindProperty("_basinDepth").floatValue = 0.48f;
+                serializedPreset.FindProperty("_basinCornerRadius").floatValue = 0.16f;
+                serializedPreset.FindProperty("_basinEdgeSoftness").floatValue = 0.025f;
+                serializedPreset.FindProperty("_poolBorderWidth").floatValue = 0.07f;
+                serializedPreset.FindProperty("_poolBorderHeight").floatValue = 0.45f;
                 serializedPreset.FindProperty("_beachHeightBand").floatValue = 1.75f;
                 serializedPreset.FindProperty("_zoneColorSmoothingPasses").intValue = 4;
                 serializedPreset.FindProperty("_beachColor").colorValue = new Color(0.25f, 0.2f, 0.12f, 1f);
@@ -46,6 +55,14 @@ namespace BitBox.TerrainGeneration.Tests.Editor
                 Assert.AreEqual(9001, request.Seed);
                 Assert.AreEqual(17, request.ResolutionX);
                 Assert.AreEqual(19, request.ResolutionZ);
+                Assert.AreEqual(TerrainUnderwaterProfile.FlatFloor, request.UnderwaterProfile);
+                Assert.AreEqual(3.5f, request.FlatFloorDepth);
+                Assert.AreEqual(0.64f, request.BasinWidth);
+                Assert.AreEqual(0.48f, request.BasinDepth);
+                Assert.AreEqual(0.16f, request.BasinCornerRadius);
+                Assert.AreEqual(0.025f, request.BasinEdgeSoftness);
+                Assert.AreEqual(0.07f, request.PoolBorderWidth);
+                Assert.AreEqual(0.45f, request.PoolBorderHeight);
                 Assert.AreEqual(1.75f, zoneSettings.BeachHeightBand);
                 Assert.AreEqual(4, preset.ZoneColorSmoothingPasses);
                 Assert.AreEqual(new Color(0.25f, 0.2f, 0.12f, 1f), colorPalette.Beach);
@@ -56,6 +73,22 @@ namespace BitBox.TerrainGeneration.Tests.Editor
             {
                 Object.DestroyImmediate(preset);
             }
+        }
+
+        [Test]
+        public void DefaultWaterParkPreset_LoadsWithRoundedBasinFlatFloorSettings()
+        {
+            TerrainGeneratorPreset preset = AssetDatabase.LoadAssetAtPath<TerrainGeneratorPreset>(DefaultWaterParkPresetPath);
+
+            Assert.IsNotNull(preset);
+            TerrainGenerationRequest request = preset.ToRequest();
+            Assert.AreEqual(TerrainMaskMode.RoundedBasin, request.MaskMode);
+            Assert.AreEqual(TerrainUnderwaterProfile.FlatFloor, request.UnderwaterProfile);
+            Assert.Greater(request.ResolutionX, 129);
+            Assert.Greater(request.ResolutionZ, 129);
+            Assert.Greater(request.FlatFloorDepth, 0f);
+            Assert.Greater(request.PoolBorderWidth, 0f);
+            Assert.Greater(request.PoolBorderHeight, 0f);
         }
 
         [Test]
@@ -125,6 +158,56 @@ namespace BitBox.TerrainGeneration.Tests.Editor
 
             Assert.IsNotNull(loadedMesh);
             Assert.AreEqual(arrays.Vertices.Length, loadedMesh.vertexCount);
+        }
+
+        [Test]
+        public void ObjMeshExporter_SavesBlenderFriendlyObjFile()
+        {
+            EnsureTestOutputFolder();
+            string path = Path.GetFullPath($"{TestOutputFolder}/GeneratedTerrain.obj");
+
+            var land = new MeshArrays(
+                new[]
+                {
+                    new Vector3(0f, 0f, 0f),
+                    new Vector3(1f, 0f, 0f),
+                    new Vector3(0f, 0f, 1f)
+                },
+                new[] { 0, 1, 2 },
+                new[]
+                {
+                    new Vector2(0f, 0f),
+                    new Vector2(1f, 0f),
+                    new Vector2(0f, 1f)
+                });
+            var shallowWater = new MeshArrays(
+                new[]
+                {
+                    new Vector3(0f, 0.25f, 0f),
+                    new Vector3(1f, 0.25f, 0f),
+                    new Vector3(0f, 0.25f, 1f)
+                },
+                new[] { 0, 1, 2 },
+                new[]
+                {
+                    new Vector2(0f, 0f),
+                    new Vector2(1f, 0f),
+                    new Vector2(0f, 1f)
+                });
+            var meshes = new LayeredTerrainMeshes(land, shallowWater, deepWater: null);
+
+            ObjMeshExporter.SaveObj(meshes, path);
+
+            Assert.IsTrue(File.Exists(path));
+
+            string obj = File.ReadAllText(path);
+            StringAssert.Contains("o Land", obj);
+            StringAssert.Contains("o ShallowWater", obj);
+            StringAssert.DoesNotContain("o DeepWater", obj);
+            StringAssert.Contains("vt ", obj);
+            StringAssert.Contains("vn ", obj);
+            StringAssert.Contains("v -1 0 0", obj);
+            StringAssert.Contains("f 1/1/1 3/3/3 2/2/2", obj);
         }
 
         [Test]

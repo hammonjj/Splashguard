@@ -10,6 +10,7 @@ namespace BitBox.Library.Input
     {
         private readonly HashSet<int> _playersUsingHelm = new();
         private readonly HashSet<int> _playersUsingBoatGun = new();
+        private readonly HashSet<int> _playersUsingCrane = new();
 
         private PlayerCoordinator _playerInputCoordinator;
         private MacroSceneType _currentMacroScene = MacroSceneType.None;
@@ -23,6 +24,8 @@ namespace BitBox.Library.Input
             _globalMessageBus.Subscribe<PlayerExitedHelmEvent>(OnPlayerExitedHelm);
             _globalMessageBus.Subscribe<PlayerEnteredBoatGunEvent>(OnPlayerEnteredBoatGun);
             _globalMessageBus.Subscribe<PlayerExitedBoatGunEvent>(OnPlayerExitedBoatGun);
+            _globalMessageBus.Subscribe<PlayerEnteredCraneEvent>(OnPlayerEnteredCrane);
+            _globalMessageBus.Subscribe<PlayerExitedCraneEvent>(OnPlayerExitedCrane);
 
             _playerInputCoordinator = StaticData.PlayerInputCoordinator;
             Assert.IsNotNull(_playerInputCoordinator, "PlayerInputCoordinator is not set in StaticData.");
@@ -40,6 +43,8 @@ namespace BitBox.Library.Input
             _globalMessageBus.Unsubscribe<PlayerExitedHelmEvent>(OnPlayerExitedHelm);
             _globalMessageBus.Unsubscribe<PlayerEnteredBoatGunEvent>(OnPlayerEnteredBoatGun);
             _globalMessageBus.Unsubscribe<PlayerExitedBoatGunEvent>(OnPlayerExitedBoatGun);
+            _globalMessageBus.Unsubscribe<PlayerEnteredCraneEvent>(OnPlayerEnteredCrane);
+            _globalMessageBus.Unsubscribe<PlayerExitedCraneEvent>(OnPlayerExitedCrane);
         }
 
         private void OnMacroSceneLoaded(MacroSceneLoadedEvent @event)
@@ -47,6 +52,7 @@ namespace BitBox.Library.Input
             _currentMacroScene = @event.SceneType;
             _playersUsingHelm.Clear();
             _playersUsingBoatGun.Clear();
+            _playersUsingCrane.Clear();
 
             if (!@event.SceneType.IsGameplayScene())
             {
@@ -63,6 +69,7 @@ namespace BitBox.Library.Input
         {
             _playersUsingHelm.Clear();
             _playersUsingBoatGun.Clear();
+            _playersUsingCrane.Clear();
 
             foreach (PlayerInput playerInput in _playerInputCoordinator.PlayerInputs)
             {
@@ -91,6 +98,7 @@ namespace BitBox.Library.Input
         {
             _playersUsingHelm.Add(@event.PlayerIndex);
             _playersUsingBoatGun.Remove(@event.PlayerIndex);
+            _playersUsingCrane.Remove(@event.PlayerIndex);
 
             if (!_currentMacroScene.IsGameplayScene()
                 || !TryGetPlayerInput(@event.PlayerIndex, out PlayerInput playerInput))
@@ -118,6 +126,7 @@ namespace BitBox.Library.Input
         {
             _playersUsingBoatGun.Add(@event.PlayerIndex);
             _playersUsingHelm.Remove(@event.PlayerIndex);
+            _playersUsingCrane.Remove(@event.PlayerIndex);
 
             if (!_currentMacroScene.IsGameplayScene()
                 || !TryGetPlayerInput(@event.PlayerIndex, out PlayerInput playerInput))
@@ -131,6 +140,34 @@ namespace BitBox.Library.Input
         private void OnPlayerExitedBoatGun(PlayerExitedBoatGunEvent @event)
         {
             _playersUsingBoatGun.Remove(@event.PlayerIndex);
+
+            if (!_currentMacroScene.IsGameplayScene()
+                || !TryGetPlayerInput(@event.PlayerIndex, out PlayerInput playerInput))
+            {
+                return;
+            }
+
+            ActivateThirdPersonMap(playerInput);
+        }
+
+        private void OnPlayerEnteredCrane(PlayerEnteredCraneEvent @event)
+        {
+            _playersUsingCrane.Add(@event.PlayerIndex);
+            _playersUsingHelm.Remove(@event.PlayerIndex);
+            _playersUsingBoatGun.Remove(@event.PlayerIndex);
+
+            if (!_currentMacroScene.IsGameplayScene()
+                || !TryGetPlayerInput(@event.PlayerIndex, out PlayerInput playerInput))
+            {
+                return;
+            }
+
+            ActivateCraneMap(playerInput);
+        }
+
+        private void OnPlayerExitedCrane(PlayerExitedCraneEvent @event)
+        {
+            _playersUsingCrane.Remove(@event.PlayerIndex);
 
             if (!_currentMacroScene.IsGameplayScene()
                 || !TryGetPlayerInput(@event.PlayerIndex, out PlayerInput playerInput))
@@ -177,6 +214,15 @@ namespace BitBox.Library.Input
             playerInput.ActivateInput();
         }
 
+        private static void ActivateCraneMap(PlayerInput playerInput)
+        {
+            Assert.IsNotNull(playerInput, $"{nameof(InputListener)} expected a non-null {nameof(PlayerInput)} when activating the crane map.");
+
+            playerInput.actions.Enable();
+            playerInput.SwitchCurrentActionMap(Strings.CraneControls);
+            playerInput.ActivateInput();
+        }
+
         private void ActivateGameplayMap(PlayerInput playerInput)
         {
             if (_playersUsingBoatGun.Contains(playerInput.playerIndex))
@@ -188,6 +234,12 @@ namespace BitBox.Library.Input
             if (_playersUsingHelm.Contains(playerInput.playerIndex))
             {
                 ActivateNavalMap(playerInput);
+                return;
+            }
+
+            if (_playersUsingCrane.Contains(playerInput.playerIndex))
+            {
+                ActivateCraneMap(playerInput);
                 return;
             }
 

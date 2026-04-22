@@ -55,7 +55,8 @@ namespace BitBox.TerrainGeneration.Unity
                 request.WorldSizeX,
                 request.WorldSizeZ,
                 colorPalette,
-                smoothingPasses);
+                smoothingPasses,
+                request);
             LastMeshArrays = LastLayeredMeshes.Land;
 
             GameObject generatedObject = ResolveGeneratedObject();

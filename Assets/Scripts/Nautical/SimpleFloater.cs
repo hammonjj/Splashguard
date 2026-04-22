@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BitBox.Library;
+using Bitbox.Splashguard.Nautical.Crane;
 using UnityEngine;
 
 namespace Bitbox.Toymageddon.Nautical
@@ -70,6 +71,42 @@ namespace Bitbox.Toymageddon.Nautical
 
             return torque;
         }
+
+        public static Vector3 CalculateAnchorAcceleration(
+            Vector3 holdPoint,
+            Vector3 currentPosition,
+            Vector3 velocity,
+            float slackRadius,
+            float horizontalStopTime,
+            float holdSpringAcceleration,
+            float maxAnchorAcceleration)
+        {
+            if (maxAnchorAcceleration <= 0f)
+            {
+                return Vector3.zero;
+            }
+
+            Vector3 planarError = holdPoint - currentPosition;
+            planarError.y = 0f;
+
+            Vector3 springAcceleration = Vector3.zero;
+            float planarDistance = planarError.magnitude;
+            if (planarDistance > slackRadius && planarDistance > Mathf.Epsilon)
+            {
+                springAcceleration = planarError.normalized
+                    * ((planarDistance - Mathf.Max(0f, slackRadius)) * Mathf.Max(0f, holdSpringAcceleration));
+            }
+
+            Vector3 horizontalVelocity = velocity;
+            horizontalVelocity.y = 0f;
+            Vector3 dampingAcceleration = -horizontalVelocity / Mathf.Max(0.01f, horizontalStopTime);
+
+            Vector3 anchorAcceleration = Vector3.ClampMagnitude(
+                springAcceleration + dampingAcceleration,
+                Mathf.Max(0f, maxAnchorAcceleration));
+            anchorAcceleration.y = 0f;
+            return anchorAcceleration;
+        }
     }
 
     [DisallowMultipleComponent]
@@ -102,13 +139,42 @@ namespace Bitbox.Toymageddon.Nautical
         [SerializeField, Min(0f)]
         private float _maxUprightTorque = 3f;
 
+        [Header("Invisible Anchor")]
+        [SerializeField]
+        private bool _anchorInPlace;
+
+        [SerializeField]
+        private bool _releaseAnchorWhenGrabbed = true;
+
+        [SerializeField, Min(0f)]
+        private float _anchorSlackRadius = 0.35f;
+
+        [SerializeField, Min(0.01f)]
+        private float _anchorHorizontalStopTime = 4f;
+
+        [SerializeField, Min(0f)]
+        private float _anchorHoldSpringAcceleration = 1.25f;
+
+        [SerializeField, Min(0f)]
+        private float _maxAnchorAcceleration = 6.5f;
+
         private readonly List<Transform> _floatPoints = new();
         private Rigidbody _rigidbody;
+        private CranePickupTarget _pickupTarget;
+        private Vector3 _anchorHoldPoint;
+        private bool _invisibleAnchorActive;
         private bool _missingRigidbodyWarningLogged;
+
+        public bool IsInvisibleAnchorActive => _invisibleAnchorActive;
+        public Vector3 InvisibleAnchorHoldPoint => _anchorHoldPoint;
 
         protected override void OnEnabled()
         {
             CacheReferences();
+            if (_anchorInPlace)
+            {
+                DropInvisibleAnchor();
+            }
         }
 
         protected override void OnFixedUpdated()
@@ -118,6 +184,9 @@ namespace Bitbox.Toymageddon.Nautical
                 LogMissingRigidbodyWarning();
                 return;
             }
+
+            ReleaseInvisibleAnchorIfGrabbed();
+            ApplyInvisibleAnchorHold();
 
             if (_floatPoints.Count == 0)
             {
@@ -206,7 +275,32 @@ namespace Bitbox.Toymageddon.Nautical
             _waterAngularDrag = Mathf.Max(0f, _waterAngularDrag);
             _uprightTorque = Mathf.Max(0f, _uprightTorque);
             _maxUprightTorque = Mathf.Max(0f, _maxUprightTorque);
+            _anchorSlackRadius = Mathf.Max(0f, _anchorSlackRadius);
+            _anchorHorizontalStopTime = Mathf.Max(0.01f, _anchorHorizontalStopTime);
+            _anchorHoldSpringAcceleration = Mathf.Max(0f, _anchorHoldSpringAcceleration);
+            _maxAnchorAcceleration = Mathf.Max(0f, _maxAnchorAcceleration);
             CacheFloatPoints();
+        }
+
+        public void DropInvisibleAnchor()
+        {
+            if (_rigidbody == null)
+            {
+                CacheReferences();
+            }
+
+            if (_rigidbody == null)
+            {
+                return;
+            }
+
+            _anchorHoldPoint = _rigidbody.position;
+            _invisibleAnchorActive = true;
+        }
+
+        public void ReleaseInvisibleAnchor()
+        {
+            _invisibleAnchorActive = false;
         }
 
         private void OnTransformChildrenChanged()
@@ -217,6 +311,7 @@ namespace Bitbox.Toymageddon.Nautical
         private void CacheReferences()
         {
             _rigidbody = GetComponentInParent<Rigidbody>();
+            _pickupTarget = GetComponentInParent<CranePickupTarget>();
             CacheFloatPoints();
             LogMissingRigidbodyWarning();
         }
@@ -280,6 +375,47 @@ namespace Bitbox.Toymageddon.Nautical
             if (torque.sqrMagnitude > 0f)
             {
                 _rigidbody.AddTorque(torque, ForceMode.Acceleration);
+            }
+        }
+
+        private void ApplyInvisibleAnchorHold()
+        {
+            if (!_invisibleAnchorActive || _rigidbody == null)
+            {
+                return;
+            }
+
+            Vector3 anchorAcceleration = SimpleFloaterUtility.CalculateAnchorAcceleration(
+                _anchorHoldPoint,
+                _rigidbody.position,
+                _rigidbody.linearVelocity,
+                _anchorSlackRadius,
+                _anchorHorizontalStopTime,
+                _anchorHoldSpringAcceleration,
+                _maxAnchorAcceleration);
+            if (anchorAcceleration.sqrMagnitude <= Mathf.Epsilon)
+            {
+                return;
+            }
+
+            _rigidbody.AddForce(anchorAcceleration, ForceMode.Acceleration);
+        }
+
+        private void ReleaseInvisibleAnchorIfGrabbed()
+        {
+            if (!_releaseAnchorWhenGrabbed || !_invisibleAnchorActive)
+            {
+                return;
+            }
+
+            if (_pickupTarget == null)
+            {
+                _pickupTarget = GetComponentInParent<CranePickupTarget>();
+            }
+
+            if (_pickupTarget != null && _pickupTarget.IsGrabbedByCrane)
+            {
+                ReleaseInvisibleAnchor();
             }
         }
 

@@ -1,7 +1,8 @@
 using UnityEngine;
 using UnityEngine.VFX;
-
 using UnityEngine.SceneManagement;
+using BitBox.Library;
+
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -9,9 +10,8 @@ using UnityEditor;
 
 namespace StormBreakers
 {
-
     [ExecuteInEditMode]
-    public class OceanController : MonoBehaviour
+    public class OceanController : MonoBehaviourBase
     {
         // This component is mandatory as it allows to edit ocean global properties 
         // This component also position the mesh roughly where the camera looks
@@ -19,6 +19,12 @@ namespace StormBreakers
 
         [Tooltip("Update the materials as it seems there is a problem with serialization when saving the scene.")]
         public bool clickHereToRefresh = false;
+        [Tooltip("Reapply non-serialized ocean material state if Unity refreshes or reimports assets while the ocean is running.")]
+        public bool repairMaterialStateDuringUpdate = true;
+        [Tooltip("Log a compact diagnostic when the ocean material has to be repaired after an editor asset refresh.")]
+        public bool logMaterialRepairDiagnostics = true;
+        [Tooltip("Minimum seconds between repeated ocean material repair diagnostics.")]
+        [Min(0.1f)] public float materialRepairLogIntervalSeconds = 2f;
 
         [Space(10)]
         [Tooltip("The albedo color of the water. In deep clear water it must be very dark blue as the light ray penetrate deeply into the water and scatter few light. In shallow water the color can be brigther with more yellow coming from the sand color. In dirty water the color can be bright too as the light ray scatter quickly when penettrating the water.  ")]
@@ -88,7 +94,7 @@ namespace StormBreakers
         public string swellPeriodRef;
 
         [Space(10)]
-        [Header("Global tweaks")] 
+        [Header("Global tweaks")]
         [Tooltip("The factor used to compute the velocity of the breaking wave. Set it to zero if you want no breaking physic effect.")]
         [Range(0, 5f)] public float breakersExtraSpeedFactor = 1f;
         [Tooltip("The factor used to compute the torque of the breaking wave. Set it to zero if you want no breaking torque effect.")]
@@ -101,9 +107,20 @@ namespace StormBreakers
         [Range(0f, 350f)] public float oceanObjectDisplacementWithCameraAngle = 70f;
 
         // internal object reference
+        private const float MatrixRepairTolerance = 0.0001f;
+        private static readonly int LidrId = Shader.PropertyToID("_LIDR");
+        private static readonly int NkvwId = Shader.PropertyToID("_NKVW");
+        private static readonly int WaterColorId = Shader.PropertyToID("_waterColor");
+        private static readonly int OceanIntensityId = Shader.PropertyToID("_oceanIntensity");
+        private static readonly int TerrainHeightmapId = Shader.PropertyToID("_terrainHeightmap");
+        private static readonly int TerrainPositionId = Shader.PropertyToID("_terrainPosition");
+        private static readonly int TerrainScaleId = Shader.PropertyToID("_terrainScale");
+        private static RenderTexture defaultTerrainHeightmap;
+        private bool loggedMissingCameraWarning;
         private VisualEffect oceanVFX; // the visual effect attached to ocean controller's object, can be null
         private WindController windController; // the wind controller of the scene, can be null
         private Light mainLight; // the directional light with the higher intensity of the scene, can be null
+        private float lastMaterialRepairLogTime = float.NegativeInfinity;
 
         private void OnEnable()
         {
@@ -116,35 +133,20 @@ namespace StormBreakers
 #endif
 
             // ------------- physics ---------------
-            Time.fixedDeltaTime = 1f/fixedFrameRate;
+            Time.fixedDeltaTime = 1f / fixedFrameRate;
             // -------------- static construction ------------
             //constructing statics arrays that cannot be managed
             Ocean.ConstructStaticData();
             // -------------- wind ---------------
             #region
             // getting the mesh render and checking if null
-            MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
-            if (this != null && meshRenderer == null)
+            if (!TryAssignSharedMaterial(out _))
             {
-                Debug.LogError("Please attach a mesh renderer with ocean.mat along with ocean controller.");
+                return;
             }
-
-            // getting the material attached, using shared means that all the other materials will be uptaded as well
-            Ocean.sharedMaterial = meshRenderer.sharedMaterial;
-
 
             // checking if it's the correct material
-            if (Ocean.sharedMaterial != null)
-            {
-                // cannot check matrices here because frequently return false
-                if (!Ocean.sharedMaterial.HasColor("_totalLigthColor") ||
-                    !Ocean.sharedMaterial.HasFloat("_oceanIntensity") ||
-                    !Ocean.sharedMaterial.HasFloat("_smoothness") ||
-                    !Ocean.sharedMaterial.HasFloat("_ripplesIntensity") ||
-                    !Ocean.sharedMaterial.HasFloat("_ripplesDirection"))
-                { Debug.LogError("Please set ocean.mat to the mesh renderer of ocean controller object."); }
-            }
-            else { Debug.LogError("Please set ocean.mat to the mesh renderer of ocean controller object."); }
+            ValidateOceanMaterial(Ocean.sharedMaterial);
 
             // getting the wind controller
             windController = Object.FindFirstObjectByType<WindController>();
@@ -191,24 +193,7 @@ namespace StormBreakers
             // -----------  total light ---------------
             #region
             // getting all the directional light to find the main light
-            Light[] lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
-
-            if (lights != null)
-            {
-                // finding the maximal intensity and saving its reference object 
-                float maxIntensity = 0f;
-                foreach (Light light in lights)
-                {
-                    if (light.intensity > maxIntensity)
-                    {
-                        // updating the maximum
-                        maxIntensity = light.intensity;
-
-                        // setting the probable main light obejct reference
-                        mainLight = light;
-                    }
-                }
-            }
+            CacheMainLight();
 
             // updating light data and sending message to every object that need such an update.
             UpdateLighting();
@@ -218,43 +203,7 @@ namespace StormBreakers
             // ----------- terrain ---------------
             #region
             // checking prescence of a terrain
-            if (terrain != null)
-            {
-                // setting the statics
-                Ocean.useTerrain = true;
-                Ocean.terrain = terrain;
-
-                // setting the material
-                Ocean.sharedMaterial.SetTexture("_terrainHeightmap", Ocean.terrain.terrainData.heightmapTexture);
-                Ocean.sharedMaterial.SetVector("_terrainPosition", Ocean.terrain.transform.position);
-                Ocean.sharedMaterial.SetVector("_terrainScale", Ocean.terrain.terrainData.size);
-
-                // setting the VFX
-                if (oceanVFX != null)
-                {
-                    oceanVFX.SetTexture("_terrainHeightmap", Ocean.terrain.terrainData.heightmapTexture);
-                    oceanVFX.SetVector3("_terrainPosition", Ocean.terrain.transform.position);
-                    oceanVFX.SetVector3("_terrainScale", Ocean.terrain.terrainData.size);
-                }
-            }
-            else
-            {
-                // if no terrain setting the defautl value
-                Ocean.useTerrain = false;
-
-                // setting the material with default value of a deep flat sea bed
-                Ocean.sharedMaterial.SetTexture("_terrainHeightmap", new RenderTexture(1, 1, 0));
-                Ocean.sharedMaterial.SetVector("_terrainPosition", new Vector3(0f, -200f, 0f));
-                Ocean.sharedMaterial.SetVector("_terrainScale", new Vector3(1f, 1f, 1f));
-
-                // setting the VFX with default value of a deep flat sea bed
-                if (oceanVFX != null)
-                {
-                    oceanVFX.SetTexture("_terrainHeightmap", new RenderTexture(1, 1, 0));
-                    oceanVFX.SetVector3("_terrainPosition", new Vector3(0f, -200f, 0f));
-                    oceanVFX.SetVector3("_terrainScale", new Vector3(1f, 1f, 1f));
-                }
-            }
+            ApplyTerrainMaterialData();
 
             #endregion
         }
@@ -267,11 +216,14 @@ namespace StormBreakers
                 return;
             }
 #endif
+            if (repairMaterialStateDuringUpdate)
+            {
+                RepairMaterialStateIfNeeded("update");
+            }
 
             // -------- positioning the mesh --------------
             // folowing the main camera in game mode
-            if (Camera.main == null) { Debug.LogError("Please set the tag 'main camera' to a camera in the scene."); }
-            Camera camera = Camera.main;
+            Camera camera = null;
 
 #if UNITY_EDITOR
             // folowing the editor camera in edit mode if it exist, using game camera otherwise
@@ -283,26 +235,65 @@ namespace StormBreakers
                 }
                 else
                 {
-                    camera = Camera.main;
+                    TryResolveOceanCamera(out camera);
                 }
-
-                // setting constantly the material matrices that can't be serialized
-                // THIS COST A BIT IN EDITOR, BUT NO OTHER SOLUTION HAS BEEN FOUND TO SET THE MATRICES AFTER A SCENE SAVE OR REFRESH, WHICH CAUSED THE WATER TO DISAPPEAR
-                var meshRenderer = GetComponent<MeshRenderer>();
-                if (meshRenderer == null) { Debug.LogError("Please attach a mesh renderer with ocean.mat along with ocean controller."); }
-                Ocean.sharedMaterial = meshRenderer.sharedMaterial;
-                Ocean.sharedMaterial.SetMatrix("_LIDR", Ocean.LIDR);
-                Ocean.sharedMaterial.SetMatrix("_NKVW", Ocean.NKVW);
+                RepairMaterialStateIfNeeded("editor camera update");
             }
+            else
+            {
+                TryResolveOceanCamera(out camera);
+            }
+#else
+            TryResolveOceanCamera(out camera);
 #endif
+            if (camera == null)
+            {
+                return;
+            }
+
             // computing the new position
             Vector3 newPosition = new Vector3(camera.transform.position.x, 0f, camera.transform.position.z);
 
             // adding some distance in front of the camera, is not excalty the camera focus. This distance is dependant of the scale of the ocean
-            newPosition += Vector3.Scale(transform.localScale, oceanObjectDisplacementWithCameraAngle*Vector3.ProjectOnPlane(camera.transform.forward, Vector3.up));
+            newPosition += Vector3.Scale(transform.localScale, oceanObjectDisplacementWithCameraAngle * Vector3.ProjectOnPlane(camera.transform.forward, Vector3.up));
 
             // rounding to 2 meters avoid jittering in the wave crest
-            transform.position = new Vector3(2f*Mathf.Round(newPosition.x*0.5f), 0f, 2f*Mathf.Round(newPosition.z*0.5f));
+            transform.position = new Vector3(2f * Mathf.Round(newPosition.x * 0.5f), 0f, 2f * Mathf.Round(newPosition.z * 0.5f));
+        }
+
+        private bool TryResolveOceanCamera(out Camera camera)
+        {
+            camera = Camera.main;
+            if (camera != null && camera.isActiveAndEnabled)
+            {
+                loggedMissingCameraWarning = false;
+                return true;
+            }
+
+            Camera[] cameras = FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            for (int i = 0; i < cameras.Length; i++)
+            {
+                Camera candidate = cameras[i];
+                if (candidate == null
+                    || !candidate.isActiveAndEnabled
+                    || !candidate.gameObject.activeInHierarchy
+                    || candidate.cameraType != CameraType.Game)
+                {
+                    continue;
+                }
+
+                camera = candidate;
+                loggedMissingCameraWarning = false;
+                return true;
+            }
+
+            if (!loggedMissingCameraWarning)
+            {
+                LogWarning("OceanController could not find an active game camera. Ocean positioning will resume once a gameplay camera exists.");
+                loggedMissingCameraWarning = true;
+            }
+
+            return false;
         }
 
 
@@ -321,15 +312,15 @@ namespace StormBreakers
             Ocean.wavelength[2] = wavelength2;
             Ocean.wavelength[3] = wavelength3;
 
-            Ocean.direction[0] = Mathf.Deg2Rad*direction0;
-            Ocean.direction[1] = Mathf.Deg2Rad*direction1;
-            Ocean.direction[2] = Mathf.Deg2Rad*direction2;
-            Ocean.direction[3] = Mathf.Deg2Rad*direction3;
+            Ocean.direction[0] = Mathf.Deg2Rad * direction0;
+            Ocean.direction[1] = Mathf.Deg2Rad * direction1;
+            Ocean.direction[2] = Mathf.Deg2Rad * direction2;
+            Ocean.direction[3] = Mathf.Deg2Rad * direction3;
 
-            Ocean.intensity[0] = intensity0*waveIntensity;
-            Ocean.intensity[1] = intensity1*waveIntensity;
-            Ocean.intensity[2] = intensity2*waveIntensity;
-            Ocean.intensity[3] = intensity3*waveIntensity;
+            Ocean.intensity[0] = intensity0 * waveIntensity;
+            Ocean.intensity[1] = intensity1 * waveIntensity;
+            Ocean.intensity[2] = intensity2 * waveIntensity;
+            Ocean.intensity[3] = intensity3 * waveIntensity;
 
             Ocean.randomization[0] = 1f - waveDensity0;
             Ocean.randomization[1] = 1f - waveDensity1;
@@ -348,7 +339,7 @@ namespace StormBreakers
             Ocean.surfaceIntensity = 0f;
 
             // running through each wave system, Ocean intensity should have been initialized by the ripples intensity
-            for (int w = 0; w<4; w++)
+            for (int w = 0; w < 4; w++)
             {
                 // checking the current wave intensity against the saved value to search the maximum 
                 if (Ocean.intensity[w] > Ocean.surfaceIntensity)
@@ -408,7 +399,7 @@ namespace StormBreakers
             else
             {
                 Ocean.Wind.speed = 5f; // 18km/h of wind
-                Ocean.Wind.inverseHeight = 1f/5f; // at 5m height
+                Ocean.Wind.inverseHeight = 1f / 5f; // at 5m height
                 Ocean.Wind.direction = 0f; // in opposite red axis direction
                 Ocean.Wind.cosDirection = -1f;
                 Ocean.Wind.sinDirection = 0f;
@@ -422,20 +413,20 @@ namespace StormBreakers
             Ocean.sharedMaterial.SetFloat("_ripplesDirection", Ocean.Wind.direction);
 
             // setting the ripples intensity function of the wind strenght, is maximal as soon the wind reachs 36km/h
-            float ripplesIntensity = Mathf.Min(1f, Ocean.Wind.speed*0.1f);
+            float ripplesIntensity = Mathf.Min(1f, Ocean.Wind.speed * 0.1f);
             Ocean.sharedMaterial.SetFloat("_ripplesIntensity", ripplesIntensity);
 
             // saving the ripple intensity so when the wave are updated we now which has the maximal intensity
             //Ocean.surfaceIntensity = Mathf.Max(Ocean.surfaceIntensity, ripplesIntensity);
 
             // setting the surfacesmoothness function of the wind, is minimal (0.7) as soon the wind reachs 72km/h, is 1 when no wind at all.
-            Ocean.sharedMaterial.SetFloat("_smoothness", Mathf.Clamp(1.1f - 0.015f*Ocean.Wind.speed, 0.7f, 1f));
+            Ocean.sharedMaterial.SetFloat("_smoothness", Mathf.Clamp(1.1f - 0.015f * Ocean.Wind.speed, 0.7f, 1f));
 
             // ------- VFX
             // setting the wind
             if (oceanVFX != null)
             {
-                oceanVFX.SetVector3("_wind", new Vector3(Ocean.Wind.speed*Ocean.Wind.cosDirection, Ocean.Wind.inverseHeight, Ocean.Wind.speed*Ocean.Wind.sinDirection));
+                oceanVFX.SetVector3("_wind", new Vector3(Ocean.Wind.speed * Ocean.Wind.cosDirection, Ocean.Wind.inverseHeight, Ocean.Wind.speed * Ocean.Wind.sinDirection));
             }
             #endregion
         }
@@ -456,11 +447,11 @@ namespace StormBreakers
 
             if (mainLight != null)
             {
-                mainLightColor = mainLight.color*mainLight.intensity;
+                mainLightColor = mainLight.color * mainLight.intensity;
             }
 
             // making the sum of ambient and directional light (approx), can be above pure white
-            Color totalLight = RenderSettings.ambientIntensity*ambientColor + mainLightColor*0.5f;
+            Color totalLight = RenderSettings.ambientIntensity * ambientColor + mainLightColor * 0.5f;
 
             // unsaturating 
             //totalLight = particleLightingFactor * new Color(Mathf.Atan(totalLight.r), Mathf.Atan(totalLight.g), Mathf.Atan(totalLight.b));
@@ -481,6 +472,290 @@ namespace StormBreakers
                 oceanVFX.SetVector4("_totalLigthColor", Ocean.totalLight);
             }
             #endregion
+        }
+
+        public bool RepairMaterialStateIfNeeded(string reason = "manual")
+        {
+#if UNITY_EDITOR
+            if (!Application.isPlaying && IsPersistentPrefabAsset())
+            {
+                return false;
+            }
+#endif
+
+            if (!TryAssignSharedMaterial(out _))
+            {
+                return false;
+            }
+
+            bool staticDataMissing = !IsOceanStaticDataReady();
+            if (staticDataMissing)
+            {
+                Ocean.ConstructStaticData();
+            }
+
+            bool repairRequired = staticDataMissing || DoesMaterialNeedRepair(Ocean.sharedMaterial);
+            if (!repairRequired)
+            {
+                // These matrices are the fragile, non-serialized part of the Storm ocean material.
+                Ocean.sharedMaterial.SetMatrix(LidrId, Ocean.LIDR);
+                Ocean.sharedMaterial.SetMatrix(NkvwId, Ocean.NKVW);
+                return false;
+            }
+
+            RefreshMaterialState(reason);
+            LogMaterialRepair(reason, staticDataMissing);
+            return true;
+        }
+
+        private void RefreshMaterialState(string reason)
+        {
+            if (!TryAssignSharedMaterial(out _))
+            {
+                return;
+            }
+
+            if (!IsOceanStaticDataReady())
+            {
+                Ocean.ConstructStaticData();
+            }
+
+            if (windController == null)
+            {
+                windController = Object.FindFirstObjectByType<WindController>();
+            }
+
+            if (mainLight == null)
+            {
+                CacheMainLight();
+            }
+
+            oceanVFX = GetComponent<VisualEffect>();
+            ApplyTerrainMaterialData();
+            UpdateWind();
+            UpdateWaves();
+            UpdateLighting();
+        }
+
+        private bool TryAssignSharedMaterial(out MeshRenderer meshRenderer)
+        {
+            meshRenderer = GetComponent<MeshRenderer>();
+            if (meshRenderer == null)
+            {
+                Debug.LogError("Please attach a mesh renderer with ocean.mat along with ocean controller.", this);
+                return false;
+            }
+
+            Ocean.sharedMaterial = meshRenderer.sharedMaterial;
+            if (Ocean.sharedMaterial == null)
+            {
+                Debug.LogError("Please set ocean.mat to the mesh renderer of ocean controller object.", this);
+                return false;
+            }
+
+            return true;
+        }
+
+        private static void ValidateOceanMaterial(Material material)
+        {
+            if (material == null)
+            {
+                return;
+            }
+
+            // cannot check matrices here because frequently return false
+            if (!material.HasColor("_totalLigthColor") ||
+                !material.HasFloat("_oceanIntensity") ||
+                !material.HasFloat("_smoothness") ||
+                !material.HasFloat("_ripplesIntensity") ||
+                !material.HasFloat("_ripplesDirection"))
+            {
+                Debug.LogError("Please set ocean.mat to the mesh renderer of ocean controller object.");
+            }
+        }
+
+        private void ApplyTerrainMaterialData()
+        {
+            if (Ocean.sharedMaterial == null)
+            {
+                return;
+            }
+
+            if (terrain != null)
+            {
+                // setting the statics
+                Ocean.useTerrain = true;
+                Ocean.terrain = terrain;
+
+                // setting the material
+                Ocean.sharedMaterial.SetTexture(TerrainHeightmapId, Ocean.terrain.terrainData.heightmapTexture);
+                Ocean.sharedMaterial.SetVector(TerrainPositionId, Ocean.terrain.transform.position);
+                Ocean.sharedMaterial.SetVector(TerrainScaleId, Ocean.terrain.terrainData.size);
+
+                // setting the VFX
+                if (oceanVFX != null)
+                {
+                    oceanVFX.SetTexture("_terrainHeightmap", Ocean.terrain.terrainData.heightmapTexture);
+                    oceanVFX.SetVector3("_terrainPosition", Ocean.terrain.transform.position);
+                    oceanVFX.SetVector3("_terrainScale", Ocean.terrain.terrainData.size);
+                }
+
+                return;
+            }
+
+            // if no terrain setting the default value
+            Ocean.useTerrain = false;
+            Ocean.terrain = null;
+
+            // setting the material with default value of a deep flat sea bed
+            Ocean.sharedMaterial.SetTexture(TerrainHeightmapId, GetDefaultTerrainHeightmap());
+            Ocean.sharedMaterial.SetVector(TerrainPositionId, new Vector3(0f, -200f, 0f));
+            Ocean.sharedMaterial.SetVector(TerrainScaleId, new Vector3(1f, 1f, 1f));
+
+            // setting the VFX with default value of a deep flat sea bed
+            if (oceanVFX != null)
+            {
+                oceanVFX.SetTexture("_terrainHeightmap", GetDefaultTerrainHeightmap());
+                oceanVFX.SetVector3("_terrainPosition", new Vector3(0f, -200f, 0f));
+                oceanVFX.SetVector3("_terrainScale", new Vector3(1f, 1f, 1f));
+            }
+        }
+
+        private void CacheMainLight()
+        {
+            Light[] lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
+            mainLight = null;
+
+            if (lights == null)
+            {
+                return;
+            }
+
+            // finding the maximal intensity and saving its reference object
+            float maxIntensity = 0f;
+            foreach (Light light in lights)
+            {
+                if (light.intensity > maxIntensity)
+                {
+                    maxIntensity = light.intensity;
+                    mainLight = light;
+                }
+            }
+        }
+
+        private static bool DoesMaterialNeedRepair(Material material)
+        {
+            if (material == null || !IsOceanStaticDataReady())
+            {
+                return true;
+            }
+
+            if (!material.HasProperty(LidrId)
+                || !material.HasProperty(NkvwId)
+                || !material.HasProperty(WaterColorId)
+                || !material.HasProperty(OceanIntensityId)
+                || !material.HasProperty(TerrainHeightmapId))
+            {
+                return false;
+            }
+
+            if (!MatrixApproximately(material.GetMatrix(LidrId), Ocean.LIDR)
+                || !MatrixApproximately(material.GetMatrix(NkvwId), Ocean.NKVW))
+            {
+                return true;
+            }
+
+            return material.GetTexture(TerrainHeightmapId) == null;
+        }
+
+        private static bool IsOceanStaticDataReady()
+        {
+            return Ocean.wavelength != null && Ocean.wavelength.Length >= 4
+                && Ocean.direction != null && Ocean.direction.Length >= 4
+                && Ocean.intensity != null && Ocean.intensity.Length >= 4
+                && Ocean.randomization != null && Ocean.randomization.Length >= 4
+                && Ocean.setNumber != null && Ocean.setNumber.Length >= 4
+                && Ocean.wavenumber != null && Ocean.wavenumber.Length >= 4
+                && Ocean.groupSpeed != null && Ocean.groupSpeed.Length >= 4
+                && Ocean.pulsation != null && Ocean.pulsation.Length >= 4
+                && Ocean.directionVector != null && Ocean.directionVector.Length >= 4
+                && Ocean.iVector != null && Ocean.iVector.Length >= 4
+                && Ocean.jVector != null && Ocean.jVector.Length >= 4;
+        }
+
+        private static bool MatrixApproximately(Matrix4x4 actual, Matrix4x4 expected)
+        {
+            for (int row = 0; row < 4; row++)
+            {
+                for (int column = 0; column < 4; column++)
+                {
+                    float actualValue = actual[row, column];
+                    float expectedValue = expected[row, column];
+                    if (!IsFinite(actualValue)
+                        || Mathf.Abs(actualValue - expectedValue) > MatrixRepairTolerance)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsFinite(float value)
+        {
+            return !float.IsNaN(value) && !float.IsInfinity(value);
+        }
+
+        private static RenderTexture GetDefaultTerrainHeightmap()
+        {
+            if (defaultTerrainHeightmap == null)
+            {
+                defaultTerrainHeightmap = new RenderTexture(1, 1, 0)
+                {
+                    name = "Storm Ocean Default Terrain Heightmap"
+                };
+                defaultTerrainHeightmap.Create();
+            }
+
+            return defaultTerrainHeightmap;
+        }
+
+        private void LogMaterialRepair(string reason, bool staticDataMissing)
+        {
+            if (!logMaterialRepairDiagnostics)
+            {
+                return;
+            }
+
+            float now = Time.realtimeSinceStartup;
+            if (now - lastMaterialRepairLogTime < materialRepairLogIntervalSeconds)
+            {
+                return;
+            }
+
+            lastMaterialRepairLogTime = now;
+            Debug.LogWarning(
+                $"Storm ocean material state was repaired. reason={reason}, controller={name}, frame={Time.frameCount}, playing={Application.isPlaying}, staticDataMissing={staticDataMissing}, material={DescribeMaterial(Ocean.sharedMaterial)}. This usually follows an editor asset import or refresh; the ocean shader matrices are runtime state and are not safely serialized.",
+                this);
+        }
+
+        private static string DescribeMaterial(Material material)
+        {
+            if (material == null)
+            {
+                return "None";
+            }
+
+#if UNITY_EDITOR
+            string assetPath = AssetDatabase.GetAssetPath(material);
+            if (!string.IsNullOrEmpty(assetPath))
+            {
+                return $"{material.name} ({assetPath})";
+            }
+#endif
+
+            return material.name;
         }
 
         // editor script
@@ -509,14 +784,14 @@ namespace StormBreakers
             //if (wavelength3 > wavelength2) { wavelength3 = wavelength2; }
 
             // computing the average wave height
-            float waveHeight0 = wavelength0*Mathf.Min(1f, intensity0*waveIntensity)*(1f - 0.5f*waveDensity0)*0.17f;
+            float waveHeight0 = wavelength0 * Mathf.Min(1f, intensity0 * waveIntensity) * (1f - 0.5f * waveDensity0) * 0.17f;
 
             // rounding to the decimeter
-            waveHeight0 = 0.1f*Mathf.Round(waveHeight0*10f);
+            waveHeight0 = 0.1f * Mathf.Round(waveHeight0 * 10f);
 
             // indicating the wave height in m and the period in seconds
             swellHeightRef = waveHeight0 + "m";
-            swellPeriodRef = Mathf.Round(Mathf.Sqrt(2f*Mathf.PI*wavelength0/9.81f)) + "s";
+            swellPeriodRef = Mathf.Round(Mathf.Sqrt(2f * Mathf.PI * wavelength0 / 9.81f)) + "s";
         }
 
         private bool IsPersistentPrefabAsset()

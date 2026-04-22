@@ -15,7 +15,7 @@ namespace Bitbox.Toymageddon.Nautical.Editor
     public sealed class OceanTerrainAssemblyWindow : EditorWindow
     {
         private const string DefaultStormOceanPrefabPath = "Assets/Prefabs/StormOcean.prefab";
-        private const string DefaultOutputAssetFolder = "Assets/Data/Terrain/OceanAssemblies";
+        private const string DefaultOutputAssetFolder = OceanAssemblySharedUtility.DefaultOutputAssetFolder;
 
         private GameObject _terraForgeGeneratedRoot;
         private GameObject _stormOceanPrefab;
@@ -304,7 +304,7 @@ namespace Bitbox.Toymageddon.Nautical.Editor
                 return false;
             }
 
-            if (ResolveOceanTemplateRenderer(request.StormOceanPrefab) == null)
+            if (OceanAssemblySharedUtility.ResolveOceanTemplateRenderer(request.StormOceanPrefab) == null)
             {
                 error = "The StormOcean prefab must have a MeshRenderer with an ocean material.";
                 return false;
@@ -316,7 +316,7 @@ namespace Bitbox.Toymageddon.Nautical.Editor
                 return false;
             }
 
-            string sanitizedOutputName = SanitizeName(request.OutputName);
+            string sanitizedOutputName = OceanAssemblySharedUtility.SanitizeName(request.OutputName, "OceanTerrainAssembly");
             if (request.TerraForgeGeneratedRoot.transform.parent == null
                 && string.Equals(request.TerraForgeGeneratedRoot.name, sanitizedOutputName, StringComparison.Ordinal))
             {
@@ -324,13 +324,13 @@ namespace Bitbox.Toymageddon.Nautical.Editor
                 return false;
             }
 
-            if (!IsProjectAssetFolderPath(ResolveOutputAssetFolder(request.OutputAssetFolder)))
+            if (!OceanAssemblySharedUtility.IsProjectAssetFolderPath(OceanAssemblySharedUtility.ResolveOutputAssetFolder(request.OutputAssetFolder)))
             {
                 error = "Output Asset Folder must be inside the Assets folder.";
                 return false;
             }
 
-            if (!request.ReplaceExistingOutput && FindSceneRoot(request.TerraForgeGeneratedRoot.scene, sanitizedOutputName) != null)
+            if (!request.ReplaceExistingOutput && OceanAssemblySharedUtility.FindSceneRoot(request.TerraForgeGeneratedRoot.scene, sanitizedOutputName) != null)
             {
                 error = $"A scene root named '{sanitizedOutputName}' already exists. Enable Replace Existing Output or choose another name.";
                 return false;
@@ -351,52 +351,19 @@ namespace Bitbox.Toymageddon.Nautical.Editor
             TryResolveLayer(request.TerraForgeGeneratedRoot, ShallowWaterChildName, out MeshLayerSource shallowSource, out Mesh shallowSourceMesh, out _);
             TryResolveLayer(request.TerraForgeGeneratedRoot, DeepWaterChildName, out MeshLayerSource deepSource, out Mesh deepSourceMesh, out _);
 
-            string outputName = SanitizeName(request.OutputName);
-            string assetRoot = EnsureOutputAssetFolder(ResolveOutputAssetFolder(request.OutputAssetFolder), outputName);
+            OceanAssemblyMeshSource terrainMeshSource = ToSharedMeshSource(terrainSource, terrainSourceMesh);
+            OceanAssemblyMeshSource shallowMeshSource = ToSharedMeshSource(shallowSource, shallowSourceMesh);
+            OceanAssemblyMeshSource deepMeshSource = ToSharedMeshSource(deepSource, deepSourceMesh);
 
-            Mesh terrainMesh = CreateOrReplaceMeshAsset(terrainSourceMesh, $"{assetRoot}/{outputName}_TerrainGeometry.asset", $"{outputName}_TerrainGeometry");
-            Mesh shallowMesh = CreateOrReplaceMeshAsset(
-                shallowSourceMesh,
-                $"{assetRoot}/{outputName}_ShallowOceanMesh.asset",
-                $"{outputName}_ShallowOceanMesh",
-                request.WaterSurfaceHeight,
-                shallowSource.Transform.localPosition.y);
-            Mesh deepMesh = CreateOrReplaceMeshAsset(
-                deepSourceMesh,
-                $"{assetRoot}/{outputName}_DeepOceanMesh.asset",
-                $"{outputName}_DeepOceanMesh",
-                request.WaterSurfaceHeight,
-                deepSource.Transform.localPosition.y);
+            string outputName = OceanAssemblySharedUtility.SanitizeName(request.OutputName, "OceanTerrainAssembly");
+            string assetRoot = OceanAssemblySharedUtility.EnsureOutputAssetFolder(request.OutputAssetFolder, outputName);
 
-            MeshRenderer stormOceanTemplateRenderer = ResolveOceanTemplateRenderer(request.StormOceanPrefab);
-            Material baseOceanMaterial = stormOceanTemplateRenderer.sharedMaterial;
-            Material oceanTemplateMaterial = CreateOrReplaceMaterialAsset(baseOceanMaterial, $"{assetRoot}/{outputName}_OceanTemplate.mat", $"{outputName}_OceanTemplate");
-            Material shallowMaterial = CreateOrReplaceMaterialAsset(baseOceanMaterial, $"{assetRoot}/{outputName}_ShallowOcean.mat", $"{outputName}_ShallowOcean");
-            Material deepMaterial = CreateOrReplaceMaterialAsset(baseOceanMaterial, $"{assetRoot}/{outputName}_DeepOcean.mat", $"{outputName}_DeepOcean");
-            SetWaterColor(oceanTemplateMaterial, request.DeepWaterColor);
-            SetWaterColor(shallowMaterial, request.ShallowWaterColor);
-            SetWaterColor(deepMaterial, request.DeepWaterColor);
+            Mesh terrainMesh = OceanAssemblySharedUtility.CreateOrReplaceMeshAsset(
+                terrainSourceMesh,
+                $"{assetRoot}/{outputName}_TerrainGeometry.asset",
+                $"{outputName}_TerrainGeometry");
 
-            OceanBlendBand[] blendBands = CreateOrReplaceBlendBands(
-                shallowSourceMesh,
-                deepSourceMesh,
-                shallowSource,
-                deepSource,
-                baseOceanMaterial,
-                assetRoot,
-                outputName,
-                request.WaterSurfaceHeight,
-                request.BlendBandCount,
-                request.ShallowWaterColor,
-                request.DeepWaterColor);
-            if (request.BlendBandCount > 0 && blendBands.Length == 0)
-            {
-                Debug.LogWarning(
-                    "Ocean Terrain Assembly could not build shallow/deep gradient bands. The shallow and deep meshes must share the same vertex topology with adjacent triangles along the boundary.",
-                    request.TerraForgeGeneratedRoot);
-            }
-
-            GameObject existingOutput = FindSceneRoot(request.TerraForgeGeneratedRoot.scene, outputName);
+            GameObject existingOutput = OceanAssemblySharedUtility.FindSceneRoot(request.TerraForgeGeneratedRoot.scene, outputName);
             if (existingOutput != null)
             {
                 UnityEngine.Object.DestroyImmediate(existingOutput);
@@ -409,48 +376,27 @@ namespace Bitbox.Toymageddon.Nautical.Editor
                 request.TerraForgeGeneratedRoot.transform.rotation);
             root.transform.localScale = request.TerraForgeGeneratedRoot.transform.lossyScale;
 
-            GameObject terrainObject = CreateMeshChild(
+            OceanAssemblySharedUtility.CreateCopiedMeshChild(
                 root.transform,
                 TerrainGeometryChildName,
-                terrainSource,
+                terrainMeshSource,
                 terrainMesh,
                 terrainSource.Renderer.sharedMaterials,
                 includeCollider: true,
                 forceWaterLayer: false);
-            GameObject shallowObject = CreateMeshChild(
-                root.transform,
-                ShallowOceanChildName,
-                shallowSource,
-                shallowMesh,
-                new[] { shallowMaterial },
-                includeCollider: false,
-                forceWaterLayer: true);
-            GameObject deepObject = CreateMeshChild(
-                root.transform,
-                DeepOceanChildName,
-                deepSource,
-                deepMesh,
-                new[] { deepMaterial },
-                includeCollider: false,
-                forceWaterLayer: true);
-            GameObject gradientObject = CreateGradientChild(root.transform, shallowSource);
-            MeshRenderer[] blendRenderers = CreateBlendBandChildren(gradientObject.transform, shallowSource, blendBands);
-            GameObject oceanSystem = CreateOceanSystem(
-                root.transform,
-                request.StormOceanPrefab,
-                oceanTemplateMaterial,
-                request.WaterSurfaceHeight);
 
-            var sync = root.AddComponent<StormOceanLayerMaterialSync>();
-            sync.Configure(
-                ResolveOceanTemplateRenderer(oceanSystem),
-                shallowObject.GetComponent<MeshRenderer>(),
-                deepObject.GetComponent<MeshRenderer>(),
+            OceanAssemblyWaterOutputResult waterOutput = OceanAssemblySharedUtility.CreateWaterOutput(
+                root.transform,
+                request.TerraForgeGeneratedRoot,
+                request.StormOceanPrefab,
+                assetRoot,
+                outputName,
+                request.WaterSurfaceHeight,
+                request.BlendBandCount,
                 request.ShallowWaterColor,
                 request.DeepWaterColor,
-                blendRenderers,
-                ExtractBlendColors(blendBands),
-                BlendBandMinimalTransparency);
+                shallowMeshSource,
+                deepMeshSource);
 
             EditorSceneManager.MarkSceneDirty(root.scene);
             AssetDatabase.SaveAssets();
@@ -459,13 +405,13 @@ namespace Bitbox.Toymageddon.Nautical.Editor
                 root,
                 assetRoot,
                 terrainMesh,
-                shallowMesh,
-                deepMesh,
-                ExtractBlendMeshes(blendBands),
-                oceanTemplateMaterial,
-                shallowMaterial,
-                deepMaterial,
-                ExtractBlendMaterials(blendBands));
+                waterOutput.ShallowMesh,
+                waterOutput.DeepMesh,
+                waterOutput.BlendMeshes,
+                waterOutput.OceanTemplateMaterial,
+                waterOutput.ShallowMaterial,
+                waterOutput.DeepMaterial,
+                waterOutput.BlendMaterials);
         }
 
         public static string BuildDefaultOutputName(string sourceRootName)
@@ -1099,6 +1045,19 @@ namespace Bitbox.Toymageddon.Nautical.Editor
             source = new MeshLayerSource(child.gameObject, child, meshRenderer);
             error = string.Empty;
             return true;
+        }
+
+        private static OceanAssemblyMeshSource ToSharedMeshSource(MeshLayerSource source, Mesh mesh)
+        {
+            return new OceanAssemblyMeshSource(
+                source.GameObject,
+                source.Transform,
+                source.Renderer,
+                mesh,
+                source.Transform.localPosition,
+                source.Transform.localRotation,
+                source.Transform.localScale,
+                source.GameObject.name);
         }
 
         private static void AccumulateMaxLayerHeight(

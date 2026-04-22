@@ -27,6 +27,28 @@ namespace BitBox.TerrainGeneration.Tests.Editor
         }
 
         [Test]
+        public void RoundedBasinMask_ProducesSmoothDeterministicRoundedFootprint()
+        {
+            var mask = new RoundedBasinMask(
+                width: 0.6f,
+                depth: 0.4f,
+                cornerRadius: 0.1f,
+                edgeSoftness: 0.03f,
+                exponent: 1f);
+
+            float center = mask.Evaluate(0.5f, 0.5f);
+            float innerEdge = mask.Evaluate(0.77f, 0.5f);
+            float boundary = mask.Evaluate(0.8f, 0.5f);
+            float outerEdge = mask.Evaluate(0.83f, 0.5f);
+
+            Assert.Greater(center, 0.95f);
+            Assert.Greater(innerEdge, boundary);
+            Assert.Greater(boundary, outerEdge);
+            Assert.AreEqual(0f, mask.Evaluate(0.05f, 0.5f), 0.0001f);
+            Assert.AreEqual(boundary, mask.Evaluate(0.8f, 0.5f), 0.0001f);
+        }
+
+        [Test]
         public void StrongFalloff_PushesEdgesBelowSeaLevel()
         {
             var request = new TerrainGenerationRequest(
