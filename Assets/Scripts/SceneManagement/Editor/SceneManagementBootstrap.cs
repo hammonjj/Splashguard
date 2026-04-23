@@ -17,6 +17,7 @@ namespace BitBox.Toymageddon.SceneManagement.Editor
         private const string SystemsScenePath = "Assets/Scenes/Systems.unity";
         private const string HubWorldScenePath = "Assets/Scenes/HubWorld.unity";
         private const string SandboxScenePath = "Assets/Scenes/Sandbox.unity";
+        private const string CombatArenaScenePath = "Assets/Scenes/CombatArena_1.unity";
 
         public static SceneManagementConfig GetOrCreateConfig()
         {
@@ -102,6 +103,14 @@ namespace BitBox.Toymageddon.SceneManagement.Editor
                 "Sandbox",
                 "Loads the shared systems, players, and sandbox scenes.",
                 requiredScenePaths: BuildGameplayRequiredScenePaths(SandboxScenePath)
+            );
+
+            dirty |= EnsureLogicalScene(
+                config,
+                MacroSceneType.CombatArena,
+                "Combat Arena",
+                "Loads the shared systems, players, and combat arena scenes.",
+                requiredScenePaths: BuildGameplayRequiredScenePaths(CombatArenaScenePath)
             );
 
             dirty |= EnsureStartupBinding(

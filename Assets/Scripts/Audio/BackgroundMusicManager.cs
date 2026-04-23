@@ -94,6 +94,7 @@ namespace Bitbox.Toymageddon.Audio
                 case MacroSceneType.CharacterSelection:
                 case MacroSceneType.HubWorld:
                 case MacroSceneType.Sandbox:
+                case MacroSceneType.CombatArena:
                     PlayRandom(musicData.hubTracks, @event.SceneType.ToString(), hubVolume);
                     break;
             }

@@ -226,7 +226,9 @@ namespace BitBox.Toymageddon.Debugging
         public static void ArmDebugLaunchRequest(MacroSceneType targetScene, string controlScheme, int deviceId)
         {
             Assert.IsTrue(
-                targetScene == MacroSceneType.HubWorld || targetScene == MacroSceneType.Sandbox,
+                targetScene == MacroSceneType.HubWorld
+                    || targetScene == MacroSceneType.Sandbox
+                    || targetScene == MacroSceneType.CombatArena,
                 $"Unsupported debug launch target '{targetScene}'.");
             Assert.IsFalse(string.IsNullOrWhiteSpace(controlScheme), "Debug launch control scheme is required.");
             Assert.IsTrue(deviceId != InvalidDeviceId, "Debug launch input device id is required.");

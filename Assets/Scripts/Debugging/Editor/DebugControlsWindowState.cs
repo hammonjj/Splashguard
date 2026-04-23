@@ -179,7 +179,9 @@ namespace Bitbox.Toymageddon.Debugging.Editor
 
         private static bool IsSupportedDebugLauncherScene(MacroSceneType sceneType)
         {
-            return sceneType == MacroSceneType.HubWorld || sceneType == MacroSceneType.Sandbox;
+            return sceneType == MacroSceneType.HubWorld
+                || sceneType == MacroSceneType.Sandbox
+                || sceneType == MacroSceneType.CombatArena;
         }
 
         private bool MigrateLegacyEditorPrefsIfNeeded()

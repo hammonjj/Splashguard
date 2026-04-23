@@ -83,6 +83,22 @@ MonoBehaviour:
       _displayName: Sandbox
     _preserveIfLoadedScenes: []
     _unloadOnExitRules: []
+  - _sceneType: 5
+    _displayName: Combat Arena
+    _description: Loads the shared systems, players, and combat arena scenes.
+    _showInDebugTools: 1
+    _requiredScenes:
+    - _sceneGuid: 743f2c4052cdc447981db7abb0074724
+      _scenePath: Assets/Scenes/Systems.unity
+      _displayName: Systems
+    - _sceneGuid: 05365755ff1e94bf59324e67050cdfa4
+      _scenePath: Assets/Scenes/Players.unity
+      _displayName: Players
+    - _sceneGuid: f8bfe54bdcaf4555845e3c5bf2dd18d3
+      _scenePath: Assets/Scenes/CombatArena_1.unity
+      _displayName: CombatArena_1
+    _preserveIfLoadedScenes: []
+    _unloadOnExitRules: []
   _startupBindings:
   - _id: startup.bootstrap
     _displayName: Title Menu

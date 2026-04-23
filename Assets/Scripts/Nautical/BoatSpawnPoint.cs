@@ -69,7 +69,7 @@ namespace Bitbox
             if (activeSpawnPoints.Count > 1)
             {
                 LogError(
-                    $"Multiple enabled {nameof(BoatSpawnPoint)} components are loaded. count={activeSpawnPoints.Count}. Only one player vessel will be spawned.");
+                    $"Multiple enabled {nameof(BoatSpawnPoint)} components are loaded. count={activeSpawnPoints.Count}. Only one player vessel will be positioned.");
             }
 
             BoatSpawnPoint primarySpawnPoint = ResolvePrimarySpawnPoint(activeSpawnPoints);
@@ -78,25 +78,57 @@ namespace Bitbox
                 return;
             }
 
-            if (ShouldSkipSpawn())
+            GameObject existingBoat = ResolveExistingBoat();
+            bool reusedExistingBoat = existingBoat != null;
+            GameObject boat = existingBoat ?? SpawnBoatInstance();
+            if (boat == null)
             {
-                LogInfo("Skipped player vessel spawn because a PlayerVesselRoot already exists in the loaded scene set.");
                 return;
             }
 
-            GameObject spawnedBoat = SpawnBoatInstance();
-            if (spawnedBoat == null)
-            {
-                return;
-            }
+            PlaceBoatAtMarkerPose(boat);
 
             LogInfo(
-                $"Spawned player vessel '{spawnedBoat.name}' at marker '{name}'. position={transform.position}, rotation={transform.rotation.eulerAngles}.");
+                $"{(reusedExistingBoat ? "Positioned existing" : "Spawned")} player vessel '{boat.name}' at marker '{name}'. position={transform.position}, rotation={transform.rotation.eulerAngles}.");
         }
 
-        private bool ShouldSkipSpawn()
+        private GameObject ResolveExistingBoat()
         {
-            return FindObjectsByType<PlayerVesselRoot>(FindObjectsInactive.Exclude, FindObjectsSortMode.None).Length > 0;
+            PlayerVesselRoot[] vesselRoots =
+                FindObjectsByType<PlayerVesselRoot>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            if (vesselRoots.Length == 0)
+            {
+                return null;
+            }
+
+            PlayerVesselRoot primaryBoat = null;
+            int bestInstanceId = int.MaxValue;
+
+            for (int i = 0; i < vesselRoots.Length; i++)
+            {
+                PlayerVesselRoot candidate = vesselRoots[i];
+                if (candidate == null
+                    || !candidate.gameObject.scene.IsValid()
+                    || !candidate.gameObject.scene.isLoaded)
+                {
+                    continue;
+                }
+
+                int candidateInstanceId = candidate.GetInstanceID();
+                if (primaryBoat == null || candidateInstanceId < bestInstanceId)
+                {
+                    primaryBoat = candidate;
+                    bestInstanceId = candidateInstanceId;
+                }
+            }
+
+            if (vesselRoots.Length > 1)
+            {
+                LogWarning(
+                    $"Multiple active {nameof(PlayerVesselRoot)} instances are loaded. count={vesselRoots.Length}. Repositioning '{primaryBoat?.name ?? "None"}'.");
+            }
+
+            return primaryBoat != null ? primaryBoat.gameObject : null;
         }
 
         private GameObject SpawnBoatInstance()
@@ -118,29 +150,52 @@ namespace Bitbox
                 return null;
             }
 
-            Scene spawnScene = ResolveSpawnScene();
-            if (spawnScene.IsValid() && spawnScene.isLoaded)
+            return spawnedBoat;
+        }
+
+        private void PlaceBoatAtMarkerPose(GameObject boat)
+        {
+            if (boat == null)
             {
-                SceneManager.MoveGameObjectToScene(spawnedBoat, spawnScene);
+                return;
             }
 
-            if (spawnedBoat.TryGetComponent(out Rigidbody boatRigidbody))
+            Scene spawnScene = ResolveSpawnScene();
+            if (spawnScene.IsValid() && spawnScene.isLoaded && boat.scene.handle != spawnScene.handle)
             {
+                SceneManager.MoveGameObjectToScene(boat, spawnScene);
+            }
+
+            AnchorControls anchorControls = boat.GetComponentInChildren<AnchorControls>(includeInactive: true);
+            bool shouldReenableAnchorControls = anchorControls != null && anchorControls.enabled;
+            if (shouldReenableAnchorControls)
+            {
+                anchorControls.enabled = false;
+            }
+
+            boat.transform.SetPositionAndRotation(transform.position, transform.rotation);
+
+            if (boat.TryGetComponent(out Rigidbody boatRigidbody))
+            {
+                boatRigidbody.position = transform.position;
+                boatRigidbody.rotation = transform.rotation;
                 boatRigidbody.linearVelocity = Vector3.zero;
                 boatRigidbody.angularVelocity = Vector3.zero;
+                boatRigidbody.Sleep();
             }
 
-            AnchorControls anchorControls = spawnedBoat.GetComponentInChildren<AnchorControls>(includeInactive: true);
             if (anchorControls != null)
             {
-                anchorControls.DropAnchor();
+                if (shouldReenableAnchorControls)
+                {
+                    anchorControls.enabled = true;
+                    anchorControls.DropAnchor();
+                }
             }
             else
             {
-                LogWarning($"Spawned player vessel '{spawnedBoat.name}' does not contain {nameof(AnchorControls)}.");
+                LogWarning($"Player vessel '{boat.name}' does not contain {nameof(AnchorControls)}.");
             }
-
-            return spawnedBoat;
         }
 
         private Scene ResolveSpawnScene()

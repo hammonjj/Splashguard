@@ -15,7 +15,8 @@ namespace BitBox.Library.Constants.Enums
         TitleMenu,
         CharacterSelection,
         HubWorld,
-        Sandbox
+        Sandbox,
+        CombatArena
     }
 
     public enum StartUpMode

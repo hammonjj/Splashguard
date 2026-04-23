@@ -34,7 +34,8 @@ namespace Bitbox.Toymageddon.Debugging.Editor.DebugLauncher
         private static readonly MacroSceneType[] SupportedScenes =
         {
             MacroSceneType.HubWorld,
-            MacroSceneType.Sandbox
+            MacroSceneType.Sandbox,
+            MacroSceneType.CombatArena
         };
 
         private static bool _awaitingPlayModeTransition;
@@ -176,7 +177,7 @@ namespace Bitbox.Toymageddon.Debugging.Editor.DebugLauncher
 
         private static bool IsSupportedScene(MacroSceneType targetScene)
         {
-            return targetScene == MacroSceneType.HubWorld || targetScene == MacroSceneType.Sandbox;
+            return Array.IndexOf(SupportedScenes, targetScene) >= 0;
         }
 
         private static bool TryGetInputOption(string selectionId, out DebugLaunchInputOption inputOption)

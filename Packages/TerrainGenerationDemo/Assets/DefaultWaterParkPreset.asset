@@ -12,32 +12,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0df63ea83be348958a0eab42b3bd2b19, type: 3}
   m_Name: DefaultWaterParkPreset
   m_EditorClassIdentifier: 
-  _seed: -508705809
-  _resolutionX: 193
-  _resolutionZ: 193
+  _seed: 446814576
+  _resolutionX: 100
+  _resolutionZ: 100
   _worldSizeX: 300
   _worldSizeZ: 300
-  _heightScale: 5.03
+  _heightScale: 9.6
   _seaLevel: -2
-  _noiseScale: 572.7
-  _octaves: 2
+  _noiseScale: 572.43
+  _octaves: 3
   _persistence: 0.349
   _lacunarity: 1
-  _noiseMode: 1
+  _noiseMode: 0
   _maskMode: 3
-  _falloffStrength: 9.76
+  _falloffStrength: 4.55
   _falloffExponent: 0.01
-  _basinWidth: 0.78
+  _basinWidth: 0.72
   _basinDepth: 0.507
-  _basinCornerRadius: 0.18
+  _basinCornerRadius: 0.216
   _basinEdgeSoftness: 0.024
   _poolBorderWidth: 0.045
   _poolBorderHeight: 0.35
   _underwaterProfile: 1
   _flatFloorDepth: 4
   _islandCount: 7
-  _islandRadius: 0.61
-  _minIslandSeparation: 0.693
+  _islandRadius: 0.63
+  _minIslandSeparation: 0.717
   _blendMode: 2
   _shallowWaterDepth: 2.2
   _beachHeightBand: 0.2
