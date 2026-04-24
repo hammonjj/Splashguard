@@ -2,6 +2,7 @@ using BitBox.Library;
 using BitBox.Library.Constants;
 using BitBox.Library.Constants.Enums;
 using BitBox.Library.Eventing.GlobalEvents;
+using BitBox.Toymageddon.UserInterface;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -14,6 +15,7 @@ namespace Bitbox
     {
         private const string HudSortingLayerName = "UIOverlay";
         private const int HudSortingOrder = 1000;
+        private static readonly Color FrontendBackgroundColor = new(0f, 0f, 0f, 0f);
 
         [Header("UI Containers")]
         [SerializeField, Required] private GameObject _inGameUIContainer;
@@ -22,6 +24,10 @@ namespace Bitbox
         private MacroSceneType _currentMacroScene = MacroSceneType.None;
         private PlayerInput _playerInput;
         private PlayerDataReference _playerDataReference;
+        private Renderer[] _visualRenderers;
+        private CameraClearFlags _authoredGameplayCameraClearFlags;
+        private Color _authoredGameplayCameraBackgroundColor;
+        private bool _hasCachedGameplayCameraPresentation;
         private InputAction _thirdPersonPauseAction;
         private InputAction _navalPauseAction;
         private InputAction _boatGunnerPauseAction;
@@ -31,7 +37,10 @@ namespace Bitbox
         protected override void OnAwakened()
         {
             CacheReferences();
+            EnsureCharacterSelectionUiController();
             EnsureUiCanvasBoundToPlayerCamera();
+            UpdateGameplayCameraPresentation();
+            UpdatePlayerVisualVisibility();
             UpdateShellVisibility();
         }
 
@@ -48,6 +57,8 @@ namespace Bitbox
             _globalMessageBus.Subscribe<MacroSceneLoadedEvent>(OnMacroSceneLoaded);
             _globalMessageBus.Subscribe<PauseGameEvent>(OnPauseGame);
 
+            UpdateGameplayCameraPresentation();
+            UpdatePlayerVisualVisibility();
             UpdateShellVisibility();
         }
 
@@ -76,6 +87,8 @@ namespace Bitbox
 
             CacheReferences();
             EnsureUiCanvasBoundToPlayerCamera();
+            UpdateGameplayCameraPresentation();
+            UpdatePlayerVisualVisibility();
             UpdateShellVisibility();
         }
 
@@ -94,6 +107,24 @@ namespace Bitbox
             Assert.IsNotNull(_playerInput, $"{nameof(PlayerContainer)} requires {nameof(PlayerInput)}.");
             Assert.IsNotNull(_playerDataReference, $"{nameof(PlayerContainer)} requires {nameof(PlayerDataReference)}.");
             Assert.IsNotNull(_playerDataReference.GameplayCamera, $"{nameof(PlayerDataReference)} requires a gameplay camera.");
+            _visualRenderers ??= _playerDataReference.VisualFacingTarget != null
+                ? _playerDataReference.VisualFacingTarget.GetComponentsInChildren<Renderer>(true)
+                : new Renderer[0];
+
+            if (!_hasCachedGameplayCameraPresentation)
+            {
+                _authoredGameplayCameraClearFlags = _playerDataReference.GameplayCamera.clearFlags;
+                _authoredGameplayCameraBackgroundColor = _playerDataReference.GameplayCamera.backgroundColor;
+                _hasCachedGameplayCameraPresentation = true;
+            }
+        }
+
+        private void EnsureCharacterSelectionUiController()
+        {
+            if (GetComponent<CharacterSelectionUiController>() == null)
+            {
+                gameObject.AddComponent<CharacterSelectionUiController>();
+            }
         }
 
         private void BindPauseAction()
@@ -134,6 +165,45 @@ namespace Bitbox
             {
                 _pauseMenuContainer.SetActive(false);
             }
+        }
+
+        private void UpdatePlayerVisualVisibility()
+        {
+            bool showPlayerVisuals = _currentMacroScene.IsGameplayScene();
+            if (_visualRenderers == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _visualRenderers.Length; i++)
+            {
+                Renderer renderer = _visualRenderers[i];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                renderer.enabled = showPlayerVisuals;
+            }
+        }
+
+        private void UpdateGameplayCameraPresentation()
+        {
+            Camera playerCamera = _playerDataReference != null ? _playerDataReference.GameplayCamera : null;
+            if (playerCamera == null || !_hasCachedGameplayCameraPresentation)
+            {
+                return;
+            }
+
+            if (_currentMacroScene.IsGameplayScene())
+            {
+                playerCamera.clearFlags = _authoredGameplayCameraClearFlags;
+                playerCamera.backgroundColor = _authoredGameplayCameraBackgroundColor;
+                return;
+            }
+
+            playerCamera.clearFlags = CameraClearFlags.SolidColor;
+            playerCamera.backgroundColor = FrontendBackgroundColor;
         }
 
         private void EnsureUiCanvasBoundToPlayerCamera()

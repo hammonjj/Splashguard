@@ -371,7 +371,7 @@ Transform:
   m_GameObject: {fileID: 6100000}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -57.5, y: 0, z: -86.9}
+  m_LocalPosition: {x: -164.5, y: 0, z: -66.9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -488,8 +488,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 37.8406, y: 4, z: 19.253448}
-  m_Center: {x: -15.9203, y: 2, z: 1.694664}
+  m_Size: {x: 7.757248, y: 4, z: 12.636745}
+  m_Center: {x: -25.039085, y: 2, z: 2.3934917}
 --- !u!1 &6200000
 GameObject:
   m_ObjectHideFlags: 0
@@ -518,7 +518,7 @@ Transform:
   m_GameObject: {fileID: 6200000}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 90.9, y: 0, z: 19.6}
+  m_LocalPosition: {x: 98.5, y: 0, z: 49.93}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -635,8 +635,45 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 18.56974, y: 4, z: 36.725548}
-  m_Center: {x: -6.28487, y: 2, z: 1.3322525}
+  m_Size: {x: 6.4677734, y: 4, z: 10.559181}
+  m_Center: {x: -0.23388672, y: 2, z: 1.5944138}
+--- !u!84 &52946434
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Storm Ocean Default Terrain Heightmap
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 1
+  m_Height: 1
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 0
+  m_ColorFormat: 57
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 0
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &291355993
 GameObject:
   m_ObjectHideFlags: 0
@@ -836,7 +873,7 @@ MeshCollider:
   serializedVersion: 5
   m_Convex: 0
   m_CookingOptions: 30
-  m_Mesh: {fileID: 4300000, guid: 7d903460144e14ebe94f89341ddd5b3d, type: 2}
+  m_Mesh: {fileID: 960771718400952183, guid: 2ab57a05c518b4260ba15657fab6f417, type: 3}
 --- !u!23 &705545378
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -893,7 +930,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 705545375}
-  m_Mesh: {fileID: 4300000, guid: 7d903460144e14ebe94f89341ddd5b3d, type: 2}
+  m_Mesh: {fileID: 960771718400952183, guid: 2ab57a05c518b4260ba15657fab6f417, type: 3}
 --- !u!1 &738270929
 GameObject:
   m_ObjectHideFlags: 0
@@ -1064,7 +1101,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 806dd4628a9a14f8e9a58b510004ed56, type: 2}
     - target: {fileID: 1919658865892365746, guid: f9f03a601c6147c7a17f8b2148f96331, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 47.2067
+      value: -102.793304
       objectReference: {fileID: 0}
     - target: {fileID: 1919658865892365746, guid: f9f03a601c6147c7a17f8b2148f96331, type: 3}
       propertyPath: m_LocalPosition.y
@@ -1072,7 +1109,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1919658865892365746, guid: f9f03a601c6147c7a17f8b2148f96331, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 47.40525
+      value: -58.59475
       objectReference: {fileID: 0}
     - target: {fileID: 1919658865892365746, guid: f9f03a601c6147c7a17f8b2148f96331, type: 3}
       propertyPath: m_LocalRotation.w
@@ -1133,7 +1170,7 @@ PrefabInstance:
     - target: {fileID: 1919658865892365748, guid: f9f03a601c6147c7a17f8b2148f96331, type: 3}
       propertyPath: m_PropertySheet.m_NamedObject.m_Array.Array.data[2].m_Value
       value: 
-      objectReference: {fileID: 1191930455}
+      objectReference: {fileID: 52946434}
     - target: {fileID: 1919658865935059801, guid: f9f03a601c6147c7a17f8b2148f96331, type: 3}
       propertyPath: m_Enabled
       value: 0
@@ -1287,43 +1324,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 291355995}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!84 &1191930455
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Storm Ocean Default Terrain Heightmap
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 1
-  m_Height: 1
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 0
-  m_ColorFormat: 57
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 0
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &1455821810
 GameObject:
   m_ObjectHideFlags: 0

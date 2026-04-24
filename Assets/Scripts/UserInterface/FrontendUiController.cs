@@ -390,7 +390,7 @@ namespace BitBox.Toymageddon.UserInterface
             _titleFlowController.Hide();
             _settingsOverlayController.Hide();
             _runtime.ScreenHost.HideAllBaseScreens();
-            _globalMessageBus.Publish(new LoadMacroSceneEvent(MacroSceneType.HubWorld));
+            _globalMessageBus.Publish(new LoadMacroSceneEvent(MacroSceneType.CharacterSelection));
         }
 
         private void HandlePlayerInvincibilityChanged(bool isInvincible)

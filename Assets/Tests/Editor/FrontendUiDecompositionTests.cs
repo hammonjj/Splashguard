@@ -219,7 +219,7 @@ namespace BitBox.Toymageddon.Tests.Editor
         }
 
         [Test]
-        public void FrontendUiController_JoinPromptAcceptanceRequestsHubWorld()
+        public void FrontendUiController_JoinPromptAcceptanceRequestsCharacterSelection()
         {
             var busHost = new GameObject("FrontendUiControllerBus");
             var host = new GameObject("FrontendUiControllerJoinPromptTest");
@@ -244,7 +244,7 @@ namespace BitBox.Toymageddon.Tests.Editor
 
                 NUnitAssert.AreSame(pendingJoinRequest, StaticData.PendingInitialJoinRequest);
                 NUnitAssert.IsNotNull(publishedEvent);
-                NUnitAssert.AreEqual(MacroSceneType.HubWorld, publishedEvent.SceneType);
+                NUnitAssert.AreEqual(MacroSceneType.CharacterSelection, publishedEvent.SceneType);
 
                 UnityEngine.Object.DestroyImmediate(controller);
             }
@@ -254,6 +254,59 @@ namespace BitBox.Toymageddon.Tests.Editor
                 GlobalStaticData.GlobalMessageBus = null;
                 UnityEngine.Object.DestroyImmediate(host);
                 UnityEngine.Object.DestroyImmediate(busHost);
+            }
+        }
+
+        [Test]
+        public void CharacterSelectionUiRuntimeBuilder_CreatesCharacterSelectionHierarchyUnderViewportRoot()
+        {
+            GameObject playerRoot = new("PlayerRoot");
+            try
+            {
+                GameObject uiCanvas = new("UiCanvas", typeof(RectTransform), typeof(Canvas), typeof(UnityEngine.UI.GraphicRaycaster));
+                uiCanvas.transform.SetParent(playerRoot.transform, false);
+
+                GameObject viewportRoot = new("ViewportRoot", typeof(RectTransform));
+                viewportRoot.transform.SetParent(uiCanvas.transform, false);
+
+                GameObject container = CharacterSelectionUiRuntimeBuilder.EnsureBuilt(playerRoot.transform);
+
+                NUnitAssert.IsNotNull(container);
+                NUnitAssert.AreEqual("CharacterSelectionRoot", container.name);
+                NUnitAssert.IsFalse(container.activeSelf);
+                var overlayImage = container.GetComponent<UnityEngine.UI.Image>();
+                NUnitAssert.IsNotNull(overlayImage);
+                NUnitAssert.AreEqual(0f, overlayImage.color.a);
+                NUnitAssert.IsNotNull(container.transform.Find("Panel/CardSurface/Title"));
+                NUnitAssert.IsNotNull(container.transform.Find("Panel/CardSurface/Subtitle"));
+                NUnitAssert.IsNotNull(container.transform.Find("Panel/CardSurface/Ready"));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(playerRoot);
+            }
+        }
+
+        [Test]
+        public void CharacterSelectionUiRuntimeBuilder_ReusesExistingHierarchy()
+        {
+            GameObject playerRoot = new("PlayerRoot");
+            try
+            {
+                GameObject uiCanvas = new("UiCanvas", typeof(RectTransform), typeof(Canvas), typeof(UnityEngine.UI.GraphicRaycaster));
+                uiCanvas.transform.SetParent(playerRoot.transform, false);
+
+                GameObject viewportRoot = new("ViewportRoot", typeof(RectTransform));
+                viewportRoot.transform.SetParent(uiCanvas.transform, false);
+
+                GameObject first = CharacterSelectionUiRuntimeBuilder.EnsureBuilt(playerRoot.transform);
+                GameObject second = CharacterSelectionUiRuntimeBuilder.EnsureBuilt(playerRoot.transform);
+
+                NUnitAssert.AreSame(first, second);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(playerRoot);
             }
         }
 

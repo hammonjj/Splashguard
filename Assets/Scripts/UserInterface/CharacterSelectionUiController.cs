@@ -195,6 +195,7 @@ namespace BitBox.Toymageddon.UserInterface
         {
             _playerInput ??= GetComponent<PlayerInput>();
             _multiplayerEventSystem ??= GetComponent<MultiplayerEventSystem>();
+            _characterSelectionContainer ??= CharacterSelectionUiRuntimeBuilder.EnsureBuilt(transform);
 
             if (_characterSelectionContainer == null)
             {
@@ -395,6 +396,164 @@ namespace BitBox.Toymageddon.UserInterface
             return _playerInput != null
                 ? _playerInput.playerIndex
                 : 0;
+        }
+    }
+
+    public static class CharacterSelectionUiRuntimeBuilder
+    {
+        private const string ViewportRootPath = "UiCanvas/ViewportRoot";
+        private const string ContainerObjectName = "CharacterSelectionRoot";
+        private const string PanelObjectName = "Panel";
+        private const string CardSurfaceObjectName = "CardSurface";
+        private const string TitleObjectName = "Title";
+        private const string SubtitleObjectName = "Subtitle";
+        private const string ReadyButtonObjectName = "Ready";
+        private const string ReadyButtonLabelObjectName = "Label";
+
+        private static readonly Color OverlayColor = new(0f, 0f, 0f, 0f);
+        private static readonly Color CardColor = new(0.07f, 0.09f, 0.13f, 0.92f);
+        private static readonly Color ReadyButtonColor = new(0.15f, 0.56f, 0.33f, 0.98f);
+        private static readonly Color TitleColor = new(0.95f, 0.96f, 0.97f, 1f);
+        private static readonly Color SubtitleColor = new(0.82f, 0.86f, 0.9f, 1f);
+
+        public static GameObject EnsureBuilt(Transform playerRoot)
+        {
+            if (playerRoot == null)
+            {
+                return null;
+            }
+
+            Transform viewportRoot = playerRoot.Find(ViewportRootPath);
+            if (viewportRoot == null)
+            {
+                return null;
+            }
+
+            Transform existingContainer = viewportRoot.Find(ContainerObjectName);
+            if (existingContainer != null)
+            {
+                return existingContainer.gameObject;
+            }
+
+            int uiLayer = viewportRoot.gameObject.layer;
+
+            GameObject container = CreateUiObject(ContainerObjectName, viewportRoot, uiLayer);
+            RectTransform containerRect = container.GetComponent<RectTransform>();
+            StretchToFill(containerRect);
+
+            Image overlayImage = container.AddComponent<Image>();
+            overlayImage.color = OverlayColor;
+            overlayImage.raycastTarget = false;
+
+            GameObject panel = CreateUiObject(PanelObjectName, container.transform, uiLayer);
+            RectTransform panelRect = panel.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.sizeDelta = new Vector2(420f, 280f);
+            panelRect.anchoredPosition = Vector2.zero;
+
+            GameObject cardSurface = CreateUiObject(CardSurfaceObjectName, panel.transform, uiLayer);
+            RectTransform cardRect = cardSurface.GetComponent<RectTransform>();
+            StretchToFill(cardRect);
+
+            Image cardImage = cardSurface.AddComponent<Image>();
+            cardImage.color = CardColor;
+            cardImage.raycastTarget = true;
+
+            Outline cardOutline = cardSurface.AddComponent<Outline>();
+            cardOutline.effectColor = new Color(0.9f, 1f, 0.83f, 0.18f);
+            cardOutline.effectDistance = new Vector2(2f, -2f);
+
+            TextMeshProUGUI titleLabel = CreateText(TitleObjectName, cardSurface.transform, uiLayer);
+            titleLabel.alignment = TextAlignmentOptions.Center;
+            titleLabel.fontSize = 28f;
+            titleLabel.fontStyle = FontStyles.Bold;
+            titleLabel.color = TitleColor;
+            RectTransform titleRect = titleLabel.rectTransform;
+            titleRect.anchorMin = new Vector2(0f, 1f);
+            titleRect.anchorMax = new Vector2(1f, 1f);
+            titleRect.pivot = new Vector2(0.5f, 1f);
+            titleRect.offsetMin = new Vector2(24f, -74f);
+            titleRect.offsetMax = new Vector2(-24f, -24f);
+
+            TextMeshProUGUI subtitleLabel = CreateText(SubtitleObjectName, cardSurface.transform, uiLayer);
+            subtitleLabel.alignment = TextAlignmentOptions.Top;
+            subtitleLabel.fontSize = 18f;
+            subtitleLabel.textWrappingMode = TextWrappingModes.Normal;
+            subtitleLabel.color = SubtitleColor;
+            RectTransform subtitleRect = subtitleLabel.rectTransform;
+            subtitleRect.anchorMin = new Vector2(0f, 0f);
+            subtitleRect.anchorMax = new Vector2(1f, 1f);
+            subtitleRect.pivot = new Vector2(0.5f, 0.5f);
+            subtitleRect.offsetMin = new Vector2(28f, 88f);
+            subtitleRect.offsetMax = new Vector2(-28f, -88f);
+
+            GameObject readyButtonObject = CreateUiObject(ReadyButtonObjectName, cardSurface.transform, uiLayer);
+            RectTransform readyButtonRect = readyButtonObject.GetComponent<RectTransform>();
+            readyButtonRect.anchorMin = new Vector2(0.5f, 0f);
+            readyButtonRect.anchorMax = new Vector2(0.5f, 0f);
+            readyButtonRect.pivot = new Vector2(0.5f, 0f);
+            readyButtonRect.sizeDelta = new Vector2(200f, 52f);
+            readyButtonRect.anchoredPosition = new Vector2(0f, 28f);
+
+            Image readyButtonImage = readyButtonObject.AddComponent<Image>();
+            readyButtonImage.color = ReadyButtonColor;
+            readyButtonImage.raycastTarget = true;
+
+            Button readyButton = readyButtonObject.AddComponent<Button>();
+            readyButton.targetGraphic = readyButtonImage;
+            ColorBlock colors = readyButton.colors;
+            colors.normalColor = ReadyButtonColor;
+            colors.highlightedColor = new Color(0.21f, 0.68f, 0.42f, 1f);
+            colors.pressedColor = new Color(0.11f, 0.44f, 0.25f, 1f);
+            colors.selectedColor = new Color(0.21f, 0.68f, 0.42f, 1f);
+            colors.disabledColor = new Color(0.19f, 0.23f, 0.27f, 0.7f);
+            readyButton.colors = colors;
+            readyButton.transition = Selectable.Transition.ColorTint;
+
+            TextMeshProUGUI readyLabel = CreateText(ReadyButtonLabelObjectName, readyButtonObject.transform, uiLayer);
+            readyLabel.alignment = TextAlignmentOptions.Center;
+            readyLabel.fontSize = 22f;
+            readyLabel.fontStyle = FontStyles.Bold;
+            readyLabel.color = TitleColor;
+            RectTransform readyLabelRect = readyLabel.rectTransform;
+            StretchToFill(readyLabelRect);
+
+            container.SetActive(false);
+            return container;
+        }
+
+        private static GameObject CreateUiObject(string name, Transform parent, int layer)
+        {
+            GameObject gameObject = new(name, typeof(RectTransform));
+            gameObject.layer = layer;
+            gameObject.transform.SetParent(parent, false);
+            return gameObject;
+        }
+
+        private static TextMeshProUGUI CreateText(string name, Transform parent, int layer)
+        {
+            GameObject gameObject = CreateUiObject(name, parent, layer);
+            var text = gameObject.AddComponent<TextMeshProUGUI>();
+            if (TMP_Settings.defaultFontAsset != null)
+            {
+                text.font = TMP_Settings.defaultFontAsset;
+            }
+
+            text.text = string.Empty;
+            text.raycastTarget = false;
+            return text;
+        }
+
+        private static void StretchToFill(RectTransform rectTransform)
+        {
+            rectTransform.anchorMin = Vector2.zero;
+            rectTransform.anchorMax = Vector2.one;
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            rectTransform.offsetMin = Vector2.zero;
+            rectTransform.offsetMax = Vector2.zero;
+            rectTransform.anchoredPosition = Vector2.zero;
         }
     }
 }

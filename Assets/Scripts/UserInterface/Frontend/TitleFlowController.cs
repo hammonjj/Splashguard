@@ -144,7 +144,7 @@ namespace BitBox.Toymageddon.UserInterface
         private void OnStartClicked()
         {
             ShowJoinPrompt(Time.unscaledTime);
-            _logInfo("Displayed join prompt screen. Awaiting any input before loading HubWorld.");
+            _logInfo("Displayed join prompt screen. Awaiting any input before loading CharacterSelection.");
         }
 
         private void OnQuitClicked()
