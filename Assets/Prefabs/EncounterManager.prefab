@@ -46,3 +46,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Bitbox.EncounterManager
   ShowGizmos: 0
   logLevel: 1
+  _encounterDefinition: {fileID: 11400000, guid: 6900878bdc1d45629dcb6d734b94e135, type: 2}
+  _spawnZones: []
+  _desiredEnemyCount: 3
+  _spawnSearchRadius: 60
+  _minimumDistanceFromPlayerLoad: 24
+  _shorelinePerimeterRadius: 10
+  _perimeterSampleCount: 12
+  _maxSpawnAttempts: 64

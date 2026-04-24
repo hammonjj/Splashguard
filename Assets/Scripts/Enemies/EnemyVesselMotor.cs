@@ -276,39 +276,7 @@ namespace Bitbox.Splashguard.Enemies
 
         private bool IsNavigablePoint(Vector3 point, EnemyVesselData data)
         {
-            if (!WaterQuery.TrySample(point, out WaterSample waterSample))
-            {
-                return false;
-            }
-
-            return !IsTerrainAboveWater(point, waterSample.Height, data);
-        }
-
-        private bool IsTerrainAboveWater(Vector3 point, float waterHeight, EnemyVesselData data)
-        {
-            if (_terrainLayerMask == 0)
-            {
-                _terrainLayerMask = LayerMask.GetMask(TerrainLayerName);
-            }
-
-            if (_terrainLayerMask == 0)
-            {
-                return false;
-            }
-
-            Vector3 probeOrigin = point + (Vector3.up * data.TerrainProbeHeight);
-            if (!Physics.Raycast(
-                    probeOrigin,
-                    Vector3.down,
-                    out RaycastHit hit,
-                    data.TerrainProbeHeight + data.TerrainProbeDepth,
-                    _terrainLayerMask,
-                    QueryTriggerInteraction.Ignore))
-            {
-                return false;
-            }
-
-            return hit.point.y >= waterHeight - data.TerrainClearance;
+            return NavalPointValidationUtility.IsPointNavigable(point, CreateNavalPointValidationSettings(data));
         }
 
         private EnemyTerrainAvoidanceDecision ResolveTerrainAvoidance(EnemyVesselData data)
@@ -331,12 +299,25 @@ namespace Bitbox.Splashguard.Enemies
         private bool IsTerrainBlockingAlong(Vector3 direction, EnemyVesselData data, out Vector3 probePoint)
         {
             probePoint = DrivePosition + (FlattenDirection(direction) * data.TerrainProbeForwardDistance);
-            if (!WaterQuery.TrySample(probePoint, out WaterSample waterSample))
+            return !NavalPointValidationUtility.ValidateCandidate(
+                probePoint,
+                CreateNavalPointValidationSettings(data)).IsValid;
+        }
+
+        private NavalPointValidationSettings CreateNavalPointValidationSettings(EnemyVesselData data)
+        {
+            if (_terrainLayerMask == 0)
             {
-                return true;
+                _terrainLayerMask = LayerMask.GetMask(TerrainLayerName);
             }
 
-            return IsTerrainAboveWater(probePoint, waterSample.Height, data);
+            return new NavalPointValidationSettings(
+                _terrainLayerMask,
+                data.TerrainProbeHeight,
+                data.TerrainProbeDepth,
+                data.TerrainClearance,
+                0f,
+                0);
         }
 
         private void ApplyThrottleForce(EnemyVesselData data, float throttleInput)

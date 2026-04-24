@@ -12,6 +12,7 @@ using Bitbox.Splashguard.Nautical;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
 
 namespace BitBox.Toymageddon
 {
@@ -175,10 +176,127 @@ namespace BitBox.Toymageddon
             }
 
             _currentMacroSceneType = targetScene;
+            yield return RunGameplayStartupTasks(targetScene);
             LogInfo($"Macro scene '{targetScene}' loaded successfully.");
             _globalMessageBus.Publish(new MacroSceneLoadedEvent(targetScene));
             _globalMessageBus.Publish(new HideLoadingScreenEvent());
             _transitionCoroutine = null;
+        }
+
+        private IEnumerator RunGameplayStartupTasks(MacroSceneType targetScene)
+        {
+            if (!targetScene.IsGameplayScene())
+            {
+                yield break;
+            }
+
+            List<IGameplaySceneStartupTask> startupTasks = CollectGameplayStartupTasks(targetScene);
+            if (startupTasks.Count == 0)
+            {
+                yield break;
+            }
+
+            const float startupProgressMin = 0.84f;
+            const float startupProgressMax = 0.98f;
+            float progressRange = startupProgressMax - startupProgressMin;
+
+            for (int taskIndex = 0; taskIndex < startupTasks.Count; taskIndex++)
+            {
+                IGameplaySceneStartupTask startupTask = startupTasks[taskIndex];
+                if (startupTask is not Object taskObject || taskObject == null)
+                {
+                    continue;
+                }
+
+                float taskStartProgress = startupProgressMin + (progressRange * taskIndex / startupTasks.Count);
+                float taskEndProgress = startupProgressMin + (progressRange * (taskIndex + 1) / startupTasks.Count);
+                string defaultProgressText = $"Preparing {targetScene}...";
+                var startupContext = new GameplaySceneStartupContext(
+                    targetScene,
+                    (taskProgress, progressText) =>
+                    {
+                        float overallProgress = Mathf.Lerp(taskStartProgress, taskEndProgress, Mathf.Clamp01(taskProgress));
+                        _globalMessageBus.Publish(
+                            new UpdateLoadingProgressEvent(
+                                overallProgress,
+                                string.IsNullOrWhiteSpace(progressText) ? defaultProgressText : progressText));
+                    });
+
+                IEnumerator startupEnumerator = null;
+                try
+                {
+                    startupEnumerator = startupTask.ExecuteStartup(startupContext);
+                }
+                catch (System.Exception exception)
+                {
+                    LogError(
+                        $"Gameplay startup task '{taskObject.name}' threw during setup for '{targetScene}': {exception.Message}");
+                }
+
+                if (startupEnumerator == null)
+                {
+                    continue;
+                }
+
+                bool moveNext;
+                do
+                {
+                    moveNext = false;
+                    object currentYield = null;
+
+                    try
+                    {
+                        moveNext = startupEnumerator.MoveNext();
+                        if (moveNext)
+                        {
+                            currentYield = startupEnumerator.Current;
+                        }
+                    }
+                    catch (System.Exception exception)
+                    {
+                        LogError(
+                            $"Gameplay startup task '{taskObject.name}' failed while running for '{targetScene}': {exception.Message}");
+                        break;
+                    }
+
+                    if (moveNext)
+                    {
+                        yield return currentYield;
+                    }
+                } while (moveNext);
+            }
+        }
+
+        private static List<IGameplaySceneStartupTask> CollectGameplayStartupTasks(MacroSceneType targetScene)
+        {
+            MonoBehaviour[] discoveredBehaviours =
+                FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            var startupTasks = new List<IGameplaySceneStartupTask>();
+
+            for (int i = 0; i < discoveredBehaviours.Length; i++)
+            {
+                MonoBehaviour behaviour = discoveredBehaviours[i];
+                if (behaviour == null
+                    || behaviour is not IGameplaySceneStartupTask startupTask
+                    || !behaviour.gameObject.scene.IsValid()
+                    || !behaviour.gameObject.scene.isLoaded
+                    || !startupTask.ShouldRunForScene(targetScene))
+                {
+                    continue;
+                }
+
+                startupTasks.Add(startupTask);
+            }
+
+            startupTasks.Sort(
+                (left, right) =>
+                {
+                    string leftName = (left as Component)?.name ?? left.GetType().Name;
+                    string rightName = (right as Component)?.name ?? right.GetType().Name;
+                    return string.CompareOrdinal(leftName, rightName);
+                });
+
+            return startupTasks;
         }
 
         private void ResetGameplayInteractionStateForTransition()
