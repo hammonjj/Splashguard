@@ -6,6 +6,7 @@ using BitBox.Library.Constants.Enums;
 using BitBox.Library.Eventing.GlobalEvents;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 namespace Bitbox
@@ -13,6 +14,20 @@ namespace Bitbox
     [DisallowMultipleComponent]
     public sealed class BoatSpawnPoint : MonoBehaviourBase
     {
+        private readonly struct RiderPoseSnapshot
+        {
+            public RiderPoseSnapshot(PlayerInput playerInput, Vector3 localPosition, Quaternion localRotation)
+            {
+                PlayerInput = playerInput;
+                LocalPosition = localPosition;
+                LocalRotation = localRotation;
+            }
+
+            public PlayerInput PlayerInput { get; }
+            public Vector3 LocalPosition { get; }
+            public Quaternion LocalRotation { get; }
+        }
+
         private const string PlayersSceneName = "Players";
         private const string PlayersScenePathSuffix = "/Players.unity";
 
@@ -160,6 +175,8 @@ namespace Bitbox
                 return;
             }
 
+            List<RiderPoseSnapshot> riderPoseSnapshots = CaptureRiderPoseSnapshots(boat);
+            LogBoatPlacementSnapshot(boat, "before_place");
             Scene spawnScene = ResolveSpawnScene();
             if (spawnScene.IsValid() && spawnScene.isLoaded && boat.scene.handle != spawnScene.handle)
             {
@@ -195,6 +212,120 @@ namespace Bitbox
             else
             {
                 LogWarning($"Player vessel '{boat.name}' does not contain {nameof(AnchorControls)}.");
+            }
+
+            RestoreRiderPoseSnapshots(boat, riderPoseSnapshots);
+            LogBoatPlacementSnapshot(boat, "after_place");
+        }
+
+        private static List<RiderPoseSnapshot> CaptureRiderPoseSnapshots(GameObject boat)
+        {
+            var riderPoseSnapshots = new List<RiderPoseSnapshot>();
+            if (boat == null)
+            {
+                return riderPoseSnapshots;
+            }
+
+            BoatPassengerVolume passengerVolume = boat.GetComponentInChildren<BoatPassengerVolume>(includeInactive: true);
+            if (passengerVolume == null)
+            {
+                return riderPoseSnapshots;
+            }
+
+            PlayerInput[] players = ResolvePlayersSnapshot();
+            for (int i = 0; i < players.Length; i++)
+            {
+                PlayerInput playerInput = players[i];
+                if (playerInput == null || !passengerVolume.IsRiderTracked(playerInput))
+                {
+                    continue;
+                }
+
+                riderPoseSnapshots.Add(
+                    new RiderPoseSnapshot(
+                        playerInput,
+                        boat.transform.InverseTransformPoint(playerInput.transform.position),
+                        Quaternion.Inverse(boat.transform.rotation) * playerInput.transform.rotation));
+            }
+
+            return riderPoseSnapshots;
+        }
+
+        private static void RestoreRiderPoseSnapshots(GameObject boat, List<RiderPoseSnapshot> riderPoseSnapshots)
+        {
+            if (boat == null || riderPoseSnapshots == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < riderPoseSnapshots.Count; i++)
+            {
+                RiderPoseSnapshot riderPoseSnapshot = riderPoseSnapshots[i];
+                PlayerInput playerInput = riderPoseSnapshot.PlayerInput;
+                if (playerInput == null)
+                {
+                    continue;
+                }
+
+                SetPlayerTransform(
+                    playerInput,
+                    boat.transform.TransformPoint(riderPoseSnapshot.LocalPosition),
+                    boat.transform.rotation * riderPoseSnapshot.LocalRotation);
+            }
+        }
+
+        private static void SetPlayerTransform(PlayerInput playerInput, Vector3 position, Quaternion rotation)
+        {
+            if (playerInput == null)
+            {
+                return;
+            }
+
+            CharacterController characterController = playerInput.GetComponent<CharacterController>();
+            bool controllerWasEnabled = characterController != null && characterController.enabled;
+            if (controllerWasEnabled)
+            {
+                characterController.enabled = false;
+            }
+
+            playerInput.transform.SetPositionAndRotation(position, rotation);
+
+            if (controllerWasEnabled)
+            {
+                characterController.enabled = true;
+            }
+        }
+
+        private void LogBoatPlacementSnapshot(GameObject boat, string phase)
+        {
+            if (boat == null)
+            {
+                return;
+            }
+
+            BoatPassengerVolume passengerVolume = boat.GetComponentInChildren<BoatPassengerVolume>(includeInactive: true);
+            bool hasRigidbody = boat.TryGetComponent(out Rigidbody boatRigidbody);
+            Vector3 boatVelocity = hasRigidbody ? boatRigidbody.linearVelocity : Vector3.zero;
+            Vector3 boatAngularVelocity = hasRigidbody ? boatRigidbody.angularVelocity : Vector3.zero;
+            LogInfo(
+                $"Boat placement snapshot. phase={phase}, marker={name}, boat={boat.name}, boatScene={boat.scene.name}, boatPosition={boat.transform.position}, boatRotation={boat.transform.rotation.eulerAngles}, boatVelocity={boatVelocity}, boatAngularVelocity={boatAngularVelocity}, passengerVolume={passengerVolume?.name ?? "None"}.");
+
+            PlayerInput[] players = ResolvePlayersSnapshot();
+            for (int i = 0; i < players.Length; i++)
+            {
+                PlayerInput playerInput = players[i];
+                if (playerInput == null)
+                {
+                    continue;
+                }
+
+                bool isChildOfBoat = playerInput.transform.IsChildOf(boat.transform);
+                Vector3 localPosition = boat.transform.InverseTransformPoint(playerInput.transform.position);
+                bool isRiderAttached = passengerVolume != null && passengerVolume.IsRiderAttached(playerInput);
+                bool isRiderSuspended = passengerVolume != null && passengerVolume.IsRiderSuspended(playerInput);
+                bool isWithinVolume = passengerVolume != null && passengerVolume.IsPlayerWithinVolume(playerInput);
+                LogInfo(
+                    $"Boat placement player snapshot. phase={phase}, marker={name}, player={DescribePlayerForLogs(playerInput)}, actionMap={playerInput.currentActionMap?.name ?? "None"}, parent={playerInput.transform.parent?.name ?? "None"}, isChildOfBoat={isChildOfBoat}, isRiderAttached={isRiderAttached}, isRiderSuspended={isRiderSuspended}, isWithinPassengerVolume={isWithinVolume}, worldPosition={playerInput.transform.position}, localPosition={localPosition}.");
             }
         }
 
@@ -298,6 +429,34 @@ namespace Bitbox
             }
 
             return primarySpawnPoint;
+        }
+
+        private static PlayerInput[] ResolvePlayersSnapshot()
+        {
+            PlayerCoordinator playerCoordinator = StaticData.PlayerInputCoordinator;
+            if (playerCoordinator != null && playerCoordinator.PlayerInputs != null)
+            {
+                List<PlayerInput> players = new();
+                for (int i = 0; i < playerCoordinator.PlayerInputs.Count; i++)
+                {
+                    PlayerInput playerInput = playerCoordinator.PlayerInputs[i];
+                    if (playerInput != null)
+                    {
+                        players.Add(playerInput);
+                    }
+                }
+
+                return players.ToArray();
+            }
+
+            return FindObjectsByType<PlayerInput>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        }
+
+        private static string DescribePlayerForLogs(PlayerInput playerInput)
+        {
+            return playerInput == null
+                ? "None"
+                : $"{playerInput.name}[index={playerInput.playerIndex}, scheme={playerInput.currentControlScheme}]";
         }
     }
 }

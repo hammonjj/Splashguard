@@ -33,10 +33,21 @@ namespace BitBox.Toymageddon.Tests.Editor
             NUnitAssert.IsNotNull(volumeTrigger, "BoatPassengerVolume should live on a trigger collider.");
             NUnitAssert.IsTrue(volumeTrigger.isTrigger);
             NUnitAssert.AreSame(vesselRoot, passengerVolume.GetComponentInParent<PlayerVesselRoot>());
+            if (volumeTrigger is BoxCollider boxCollider)
+            {
+                NUnitAssert.GreaterOrEqual(
+                    boxCollider.size.z,
+                    3.5f,
+                    "The authored passenger volume should cover the full deck length, including boat-side station and ladder handoff points.");
+                NUnitAssert.GreaterOrEqual(
+                    boxCollider.size.y,
+                    1f,
+                    "The authored passenger volume should have enough vertical headroom for rider reconciliation after scene loads and station releases.");
+            }
         }
 
         [Test]
-        public void RefreshPassengers_ParentsFreeRoamPlayersAndRestoresWorldPoseOnExit()
+        public void RefreshPassengers_TracksFreeRoamPlayersWithoutChangingParentAndRestoresWorldPoseOnExit()
         {
             PlayerCoordinator previousCoordinator = StaticData.PlayerInputCoordinator;
             CreatePassengerVolume(out GameObject boatRoot, out BoatPassengerVolume passengerVolume);
@@ -55,7 +66,8 @@ namespace BitBox.Toymageddon.Tests.Editor
                 InvokePrivate(passengerVolume, "RefreshPassengers");
 
                 Vector3 attachedWorldPosition = playerInput.transform.position;
-                NUnitAssert.AreSame(boatRoot.transform, playerInput.transform.parent);
+                NUnitAssert.IsTrue(passengerVolume.IsRiderAttached(playerInput));
+                NUnitAssert.AreSame(originalParent.transform, playerInput.transform.parent);
                 NUnitAssert.AreEqual(new Vector3(0f, 0.75f, 0f), attachedWorldPosition);
 
                 playerInput.transform.position = new Vector3(6f, 0.75f, 0f);
@@ -64,6 +76,7 @@ namespace BitBox.Toymageddon.Tests.Editor
 
                 InvokePrivate(passengerVolume, "RefreshPassengers");
 
+                NUnitAssert.IsFalse(passengerVolume.IsRiderTracked(playerInput));
                 NUnitAssert.AreSame(originalParent.transform, playerInput.transform.parent);
                 NUnitAssert.AreEqual(detachedExpectedPosition, playerInput.transform.position);
                 NUnitAssert.AreEqual(detachedExpectedRotation.eulerAngles, playerInput.transform.rotation.eulerAngles);
@@ -97,10 +110,12 @@ namespace BitBox.Toymageddon.Tests.Editor
             try
             {
                 InvokePrivate(passengerVolume, "RefreshPassengers");
-                NUnitAssert.AreSame(boatRoot.transform, playerInput.transform.parent);
+                NUnitAssert.IsTrue(passengerVolume.IsRiderAttached(playerInput));
+                NUnitAssert.AreSame(originalParent.transform, playerInput.transform.parent);
 
                 passengerVolume.enabled = false;
 
+                NUnitAssert.IsFalse(passengerVolume.IsRiderTracked(playerInput));
                 NUnitAssert.AreSame(originalParent.transform, playerInput.transform.parent);
             }
             finally
@@ -132,7 +147,8 @@ namespace BitBox.Toymageddon.Tests.Editor
             try
             {
                 InvokePrivate(passengerVolume, "RefreshPassengers");
-                NUnitAssert.AreSame(boatRoot.transform, playerInput.transform.parent);
+                NUnitAssert.IsTrue(passengerVolume.IsRiderAttached(playerInput));
+                NUnitAssert.AreSame(originalParent.transform, playerInput.transform.parent);
 
                 Object.DestroyImmediate(passengerVolume.gameObject);
 
@@ -150,7 +166,7 @@ namespace BitBox.Toymageddon.Tests.Editor
         }
 
         [Test]
-        public void RefreshPassengers_ReattachesPlayersAfterStationReleaseWhenStillInside()
+        public void RefreshPassengers_KeepsSuspendedRidersAttachedAcrossStationHandoff()
         {
             PlayerCoordinator previousCoordinator = StaticData.PlayerInputCoordinator;
             CreatePassengerVolume(out GameObject boatRoot, out BoatPassengerVolume passengerVolume);
@@ -167,17 +183,26 @@ namespace BitBox.Toymageddon.Tests.Editor
             try
             {
                 InvokePrivate(passengerVolume, "RefreshPassengers");
-                NUnitAssert.AreSame(boatRoot.transform, playerInput.transform.parent);
+                NUnitAssert.IsTrue(passengerVolume.IsRiderAttached(playerInput));
+                NUnitAssert.AreSame(originalParent.transform, playerInput.transform.parent);
 
+                passengerVolume.TrySuspendRider(playerInput);
                 playerCollider.enabled = false;
                 playerInput.SwitchCurrentActionMap(Strings.BoatGunner);
                 InvokePrivate(passengerVolume, "RefreshPassengers");
+                NUnitAssert.IsTrue(
+                    passengerVolume.IsRiderTracked(playerInput),
+                    "Station handoff should keep the rider tracked to the boat instead of treating the player as off-boat.");
                 NUnitAssert.AreSame(originalParent.transform, playerInput.transform.parent);
+                NUnitAssert.IsTrue(passengerVolume.IsRiderSuspended(playerInput));
 
                 playerCollider.enabled = true;
                 playerInput.SwitchCurrentActionMap(Strings.ThirdPersonControls);
+                passengerVolume.ResumeRider(playerInput);
                 InvokePrivate(passengerVolume, "RefreshPassengers");
-                NUnitAssert.AreSame(boatRoot.transform, playerInput.transform.parent);
+                NUnitAssert.IsTrue(passengerVolume.IsRiderAttached(playerInput));
+                NUnitAssert.AreSame(originalParent.transform, playerInput.transform.parent);
+                NUnitAssert.IsFalse(passengerVolume.IsRiderSuspended(playerInput));
             }
             finally
             {

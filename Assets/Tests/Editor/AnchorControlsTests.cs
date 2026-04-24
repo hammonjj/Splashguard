@@ -6,6 +6,7 @@ using Bitbox;
 using BitBox.Library;
 using BitBox.Library.Constants;
 using BitBox.Library.Eventing;
+using BitBox.Library.Eventing.GlobalEvents;
 using NUnit.Framework;
 using NUnitAssert = NUnit.Framework.Assert;
 using UnityEditor;
@@ -390,6 +391,58 @@ namespace BitBox.Toymageddon.Tests.Editor
                 NUnitAssert.IsFalse(
                     HelmControl.TryGetActiveHelm(playerInput.playerIndex, out _),
                     "Releasing the helm should clear the active station lookup for the player.");
+                BoatPassengerVolume passengerVolume = playerVessel.GetComponentInChildren<BoatPassengerVolume>(includeInactive: true);
+                NUnitAssert.IsNotNull(passengerVolume, "PlayerVessel should include a BoatPassengerVolume for rider tracking.");
+                NUnitAssert.IsTrue(
+                    passengerVolume.IsRiderAttached(playerInput),
+                    "Releasing the helm should hand the player back to tracked boat-rider state so they stay with the moving vessel.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(playerInput.gameObject);
+                UnityEngine.Object.DestroyImmediate(inputActions);
+                UnityEngine.Object.DestroyImmediate(playerVessel);
+            }
+        }
+
+        [Test]
+        public void HelmSceneTransitionReset_ReleasesControlAndPublishesExitEvent()
+        {
+            using TestMessageBusScope busScope = new();
+            var prefab = LoadRequiredPrefab(PlayerVesselPrefabPath);
+            var playerVessel = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
+            PlayerInput playerInput = CreatePlayerInput(Strings.ThirdPersonControls, out InputActionAsset inputActions);
+            int exitedPlayerIndex = -1;
+
+            GlobalStaticData.GlobalMessageBus.Subscribe<PlayerExitedHelmEvent>(@event => exitedPlayerIndex = @event.PlayerIndex);
+
+            try
+            {
+                NUnitAssert.IsNotNull(playerVessel, "Expected to instantiate PlayerVessel prefab.");
+                var helmControl = playerVessel.GetComponent<HelmControl>();
+                NUnitAssert.IsNotNull(helmControl, "PlayerVessel should own HelmControl.");
+                InvokePrivate(helmControl, "CacheReferences");
+
+                InvokePrivate(helmControl, "AssumeControl", playerInput);
+                HelmControl.ReleaseAllForSceneTransition();
+
+                NUnitAssert.IsFalse(
+                    HelmControl.TryGetActiveHelm(playerInput.playerIndex, out _),
+                    "Scene transitions should clear helm ownership before the next gameplay scene loads.");
+                NUnitAssert.IsNotNull(playerInput.currentActionMap);
+                NUnitAssert.AreEqual(
+                    Strings.ThirdPersonControls,
+                    playerInput.currentActionMap.name,
+                    "Scene transitions should return helm players to the normal gameplay input map.");
+                BoatPassengerVolume passengerVolume = playerVessel.GetComponentInChildren<BoatPassengerVolume>(includeInactive: true);
+                NUnitAssert.IsNotNull(passengerVolume, "PlayerVessel should include a BoatPassengerVolume for rider tracking.");
+                NUnitAssert.IsTrue(
+                    passengerVolume.IsRiderAttached(playerInput),
+                    "Scene-transition cleanup should restore released helm players to tracked boat-rider state so they carry forward with the vessel.");
+                NUnitAssert.AreEqual(
+                    playerInput.playerIndex,
+                    exitedPlayerIndex,
+                    "Scene-transition cleanup should publish the helm exit event so cameras and HUD reset.");
             }
             finally
             {

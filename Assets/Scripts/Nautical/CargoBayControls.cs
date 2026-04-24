@@ -33,6 +33,7 @@ namespace Bitbox.Splashguard.Nautical
         private readonly List<PlayerInput> _staleOverlappingPlayers = new();
 
         private Transform _boatTransform;
+        private BoatPassengerVolume _boatPassengerVolume;
         private PlayerInput _controllingPlayerInput;
         private PlayerMovement _controlledPlayerMovement;
         private InputAction _actionAction;
@@ -58,6 +59,28 @@ namespace Bitbox.Splashguard.Nautical
         public static bool TryGetActiveCargoBay(int playerIndex, out CargoBayControls controls)
         {
             return ActiveCargoBaysByPlayerIndex.TryGetValue(playerIndex, out controls) && controls != null;
+        }
+
+        public static void ReleaseAllForSceneTransition()
+        {
+            if (ActiveCargoBaysByPlayerIndex.Count == 0)
+            {
+                return;
+            }
+
+            CargoBayControls[] activeCargoBays = new CargoBayControls[ActiveCargoBaysByPlayerIndex.Count];
+            ActiveCargoBaysByPlayerIndex.Values.CopyTo(activeCargoBays, 0);
+
+            for (int i = 0; i < activeCargoBays.Length; i++)
+            {
+                CargoBayControls activeCargoBay = activeCargoBays[i];
+                if (activeCargoBay == null)
+                {
+                    continue;
+                }
+
+                activeCargoBay.ReleaseForSceneTransition();
+            }
         }
 
         protected override void OnEnabled()
@@ -165,6 +188,7 @@ namespace Bitbox.Splashguard.Nautical
         private void CacheReferences()
         {
             _boatTransform ??= ResolveBoatTransform();
+            _boatPassengerVolume ??= ResolveBoatPassengerVolume();
             _interactionTrigger = ResolveInteractionTrigger();
             _craneRig ??= ResolveCraneRig();
 
@@ -199,6 +223,16 @@ namespace Bitbox.Splashguard.Nautical
             }
 
             return transform.root != null ? transform.root : transform;
+        }
+
+        private BoatPassengerVolume ResolveBoatPassengerVolume()
+        {
+            PlayerVesselRoot vesselRoot = _boatTransform != null
+                ? _boatTransform.GetComponent<PlayerVesselRoot>()
+                : GetComponentInParent<PlayerVesselRoot>();
+            return vesselRoot != null
+                ? vesselRoot.GetComponentInChildren<BoatPassengerVolume>(includeInactive: true)
+                : null;
         }
 
         private CraneControlRig ResolveCraneRig()
@@ -276,6 +310,7 @@ namespace Bitbox.Splashguard.Nautical
                 return;
             }
 
+            _boatPassengerVolume?.TrySuspendRider(playerInput);
             ActivateInputMap(playerInput, Strings.CraneControls);
             _controllingPlayerInput = playerInput;
             _controlledPlayerMovement = playerMovement;
@@ -330,7 +365,13 @@ namespace Bitbox.Splashguard.Nautical
                 ActivateInputMap(releasedPlayerInput, Strings.ThirdPersonControls);
             }
 
+            _boatPassengerVolume?.ResumeRider(releasedPlayerInput);
             _globalMessageBus.Publish(new PlayerExitedCraneEvent(playerIndex));
+        }
+
+        private void ReleaseForSceneTransition()
+        {
+            ReleaseControl(reason: "scene_transition");
         }
 
         public Transform ResolveCraneCameraLookAtTarget()

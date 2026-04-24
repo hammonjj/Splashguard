@@ -1,11 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
+using BitBox.Library.Constants;
 using BitBox.Library.Constants.Enums;
 using BitBox.Library.Eventing.GlobalEvents;
 using BitBox.Library;
 using BitBox.Toymageddon.Debugging;
 using BitBox.Toymageddon.SceneManagement;
 using BitBox.Toymageddon.UserInterface;
+using Bitbox;
+using Bitbox.Splashguard.Nautical;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -146,6 +149,7 @@ namespace BitBox.Toymageddon
                 yield break;
             }
 
+            ResetGameplayInteractionStateForTransition();
             LogDebug(plan.Summary);
             _globalMessageBus.Publish(new ShowLoadingScreenEvent());
             yield return null;
@@ -175,6 +179,19 @@ namespace BitBox.Toymageddon
             _globalMessageBus.Publish(new MacroSceneLoadedEvent(targetScene));
             _globalMessageBus.Publish(new HideLoadingScreenEvent());
             _transitionCoroutine = null;
+        }
+
+        private void ResetGameplayInteractionStateForTransition()
+        {
+            if (!_currentMacroSceneType.IsGameplayScene())
+            {
+                return;
+            }
+
+            HelmControl.ReleaseAllForSceneTransition();
+            DeckMountedGunControl.ReleaseAllForSceneTransition();
+            CargoBayControls.ReleaseAllForSceneTransition();
+            LadderControl.ReleaseAllForSceneTransition();
         }
 
         private MacroSceneType ResolveStartupScene()

@@ -31,6 +31,7 @@ namespace Bitbox
         private Rigidbody _rigidbody;
         private Transform _boatTransform;
         private PlayerInput _controllingPlayerInput;
+        private BoatPassengerVolume _boatPassengerVolume;
         private InputAction _throttleAction;
         private InputAction _steeringAction;
         private InputAction _actionAction;
@@ -54,6 +55,28 @@ namespace Bitbox
         public static bool TryGetActiveHelm(int playerIndex, out HelmControl helm)
         {
             return ActiveHelmsByPlayerIndex.TryGetValue(playerIndex, out helm) && helm != null;
+        }
+
+        public static void ReleaseAllForSceneTransition()
+        {
+            if (ActiveHelmsByPlayerIndex.Count == 0)
+            {
+                return;
+            }
+
+            HelmControl[] activeHelms = new HelmControl[ActiveHelmsByPlayerIndex.Count];
+            ActiveHelmsByPlayerIndex.Values.CopyTo(activeHelms, 0);
+
+            for (int i = 0; i < activeHelms.Length; i++)
+            {
+                HelmControl activeHelm = activeHelms[i];
+                if (activeHelm == null)
+                {
+                    continue;
+                }
+
+                activeHelm.ReleaseForSceneTransition();
+            }
         }
 
         protected override void OnEnabled()
@@ -191,6 +214,7 @@ namespace Bitbox
             Assert.IsNotNull(_boatNavigationData, $"{nameof(HelmControl)} requires {nameof(BoatNavigationData)}.");
 
             _boatTransform = _rigidbody.transform;
+            _boatPassengerVolume ??= ResolveBoatPassengerVolume();
 
             if (_driveTransform == null)
             {
@@ -238,6 +262,7 @@ namespace Bitbox
             Assert.IsNotNull(_actionAction, $"{nameof(HelmControl)} requires the '{Strings.ActionAction}' action.");
             Assert.IsNotNull(_killThrottleAction, $"{nameof(HelmControl)} requires the '{Strings.KillThrottleAction}' action.");
 
+            bool suspendedRider = _boatPassengerVolume != null && _boatPassengerVolume.TrySuspendRider(playerInput);
             ActivateInputMap(playerInput, Strings.NavalNavigation);
             _controllingPlayerInput = playerInput;
             CaptureControlledPlayerPose(playerInput.transform);
@@ -246,7 +271,7 @@ namespace Bitbox
             ActiveHelmsByPlayerIndex[playerInput.playerIndex] = this;
             SyncControlledPlayerPose();
             LogInfo(
-                $"Player took helm. helm={name}, player={DescribePlayer(playerInput)}, throttle={_throttleSetting:0.00}.");
+                $"Player took helm. helm={name}, player={DescribePlayer(playerInput)}, throttle={_throttleSetting:0.00}, suspendedRider={suspendedRider}, riderVolume={_boatPassengerVolume?.name ?? "None"}, playerParent={playerInput.transform.parent?.name ?? "None"}.");
             _globalMessageBus.Publish(new PlayerEnteredHelmEvent(playerInput.playerIndex));
         }
 
@@ -305,11 +330,19 @@ namespace Bitbox
             SyncControlledPlayerPose(releasedPlayerInput.transform);
             RestoreControlledPlayerColliders();
             ActivateInputMap(releasedPlayerInput, Strings.ThirdPersonControls);
+            bool resumedRider = _boatPassengerVolume != null && _boatPassengerVolume.ResumeRider(releasedPlayerInput);
+            LogInfo(
+                $"Helm rider handoff complete. helm={name}, player={DescribePlayer(releasedPlayerInput)}, reason={reason}, resumedRider={resumedRider}, riderVolume={_boatPassengerVolume?.name ?? "None"}, playerParent={releasedPlayerInput.transform.parent?.name ?? "None"}, playerPosition={releasedPlayerInput.transform.position}.");
 
             if (publishEvent)
             {
                 _globalMessageBus.Publish(new PlayerExitedHelmEvent(playerIndex));
             }
+        }
+
+        private void ReleaseForSceneTransition()
+        {
+            ReleaseControl(reason: "scene_transition");
         }
 
         private void ReadControlInputs()
@@ -462,6 +495,16 @@ namespace Bitbox
             playerTransform.SetPositionAndRotation(
                 _boatTransform.TransformPoint(_controlledPlayerLocalPosition),
                 _boatTransform.rotation * _controlledPlayerLocalRotation);
+        }
+
+        private BoatPassengerVolume ResolveBoatPassengerVolume()
+        {
+            PlayerVesselRoot vesselRoot = _boatTransform != null
+                ? _boatTransform.GetComponent<PlayerVesselRoot>()
+                : GetComponentInParent<PlayerVesselRoot>();
+            return vesselRoot != null
+                ? vesselRoot.GetComponentInChildren<BoatPassengerVolume>(includeInactive: true)
+                : null;
         }
 
         private void DisableControlledPlayerColliders(Transform playerRoot)

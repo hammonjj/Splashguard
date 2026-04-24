@@ -108,6 +108,7 @@ namespace Bitbox
 
         private PlayerInput _climbingPlayerInput;
         private PlayerMovement _climbingPlayerMovement;
+        private BoatPassengerVolume _boatPassengerVolume;
         private InputAction _moveAction;
         private Rigidbody _triggerRigidbody;
         private float _climbT;
@@ -119,6 +120,28 @@ namespace Bitbox
         public static bool TryGetActiveLadder(int playerIndex, out LadderControl ladder)
         {
             return ActiveLaddersByPlayerIndex.TryGetValue(playerIndex, out ladder) && ladder != null;
+        }
+
+        public static void ReleaseAllForSceneTransition()
+        {
+            if (ActiveLaddersByPlayerIndex.Count == 0)
+            {
+                return;
+            }
+
+            LadderControl[] activeLadders = new LadderControl[ActiveLaddersByPlayerIndex.Count];
+            ActiveLaddersByPlayerIndex.Values.CopyTo(activeLadders, 0);
+
+            for (int i = 0; i < activeLadders.Length; i++)
+            {
+                LadderControl activeLadder = activeLadders[i];
+                if (activeLadder == null)
+                {
+                    continue;
+                }
+
+                activeLadder.ReleaseForSceneTransition();
+            }
         }
 
         protected override void OnEnabled()
@@ -243,6 +266,7 @@ namespace Bitbox
         private void CacheReferences()
         {
             ConfigureTriggerRigidbody();
+            _boatPassengerVolume ??= ResolveBoatPassengerVolume();
 
             _bottomAnchor ??= FindChildByName(transform, BottomAnchorName);
             _topAnchor ??= FindChildByName(transform, TopAnchorName);
@@ -344,10 +368,11 @@ namespace Bitbox
 
             _climbingPlayerInput = playerInput;
             _climbingPlayerMovement = playerMovement;
+            bool suspendedRider = _boatPassengerVolume != null && _boatPassengerVolume.TrySuspendRider(playerInput);
             _climbT = LadderClimbUtility.ProjectNormalized(_bottomAnchor.position, _topAnchor.position, playerInput.transform.position);
             ActiveLaddersByPlayerIndex[playerInput.playerIndex] = this;
             SyncClimbingPlayerPose(0f);
-            LogInfo($"Player mounted ladder. ladder={name}, player={DescribePlayer(playerInput)}, t={_climbT:0.###}.");
+            LogInfo($"Player mounted ladder. ladder={name}, player={DescribePlayer(playerInput)}, t={_climbT:0.###}, suspendedRider={suspendedRider}, riderVolume={_boatPassengerVolume?.name ?? "None"}.");
             return true;
         }
 
@@ -428,10 +453,31 @@ namespace Bitbox
             }
 
             releasedPlayerMovement?.EndScriptedMovement(this);
-            LogInfo($"Player released ladder. ladder={name}, player={DescribePlayer(releasedPlayerInput)}, reason={reason}, t={_climbT:0.###}.");
+            bool wasWithinPassengerVolume = _boatPassengerVolume != null && _boatPassengerVolume.IsPlayerWithinVolume(releasedPlayerInput);
+            bool resumedRider = false;
+            bool detachedWithMomentum = false;
+            if (_boatPassengerVolume != null)
+            {
+                if (wasWithinPassengerVolume)
+                {
+                    resumedRider = _boatPassengerVolume.ResumeRider(releasedPlayerInput);
+                }
+                else
+                {
+                    detachedWithMomentum = true;
+                    _boatPassengerVolume.DetachRiderWithMomentum(releasedPlayerInput);
+                }
+            }
+
+            LogInfo($"Player released ladder. ladder={name}, player={DescribePlayer(releasedPlayerInput)}, reason={reason}, t={_climbT:0.###}, wasWithinPassengerVolume={wasWithinPassengerVolume}, resumedRider={resumedRider}, detachedWithMomentum={detachedWithMomentum}, riderVolume={_boatPassengerVolume?.name ?? "None"}, playerParent={releasedPlayerInput.transform.parent?.name ?? "None"}, playerPosition={releasedPlayerInput.transform.position}.");
             _climbingPlayerInput = null;
             _climbingPlayerMovement = null;
             _moveAction = null;
+        }
+
+        private void ReleaseForSceneTransition()
+        {
+            ReleaseClimbingPlayer(ResolveNearestExitDirection(), "scene_transition");
         }
 
         private Transform ResolveExitAnchor(LadderExitDirection exitDirection)
@@ -614,6 +660,14 @@ namespace Bitbox
         {
             playerInput = other != null ? other.GetComponentInParent<PlayerInput>() : null;
             return playerInput != null;
+        }
+
+        private BoatPassengerVolume ResolveBoatPassengerVolume()
+        {
+            PlayerVesselRoot vesselRoot = GetComponentInParent<PlayerVesselRoot>();
+            return vesselRoot != null
+                ? vesselRoot.GetComponentInChildren<BoatPassengerVolume>(includeInactive: true)
+                : null;
         }
 
         private static void SetPlayerTransform(PlayerInput playerInput, Vector3 position, Quaternion rotation)

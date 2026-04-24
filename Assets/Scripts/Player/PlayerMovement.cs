@@ -17,10 +17,12 @@ namespace Bitbox
     [RequireComponent(typeof(PlayerDataReference))]
     public class PlayerMovement : MonoBehaviourBase
     {
+        private const string DefaultLayerName = "Default";
         private const string TerrainLayerName = "Terrain";
         private const float GroundedGracePeriodSeconds = 0.12f;
         private const float SupportProbeMargin = 0.02f;
         private const float MinimumSupportProbeDistance = 0.12f;
+        private const float InheritedVelocityDampingPerSecond = 7.5f;
         private static readonly string[] GameplaySpawnTags =
         {
             Tags.PlayerOneSpawnPoint,
@@ -43,6 +45,7 @@ namespace Bitbox
         private Vector3 _activeSupportLocalPoint;
         private bool _isFloatingInWater;
         private object _scriptedMovementOwner;
+        private Vector3 _inheritedHorizontalVelocity;
 
         protected override void OnAwakened()
         {
@@ -80,6 +83,7 @@ namespace Bitbox
             _lastGroundedTime = float.NegativeInfinity;
             _isFloatingInWater = false;
             _scriptedMovementOwner = null;
+            _inheritedHorizontalVelocity = Vector3.zero;
             ClearActiveSupport();
             PublishGroundedIdleAnimation("disabled");
             _globalMessageBus.Unsubscribe<MacroSceneLoadedEvent>(OnMacroSceneLoaded);
@@ -134,9 +138,25 @@ namespace Bitbox
             _verticalVelocity = 0f;
             _lastGroundedTime = Time.time;
             _isFloatingInWater = false;
+            _inheritedHorizontalVelocity = Vector3.zero;
             ClearActiveSupport();
             PublishGroundedIdleAnimation("scripted_movement_started");
             return true;
+        }
+
+        public void ApplyInheritedWorldVelocity(Vector3 worldVelocity)
+        {
+            _inheritedHorizontalVelocity = Vector3.ProjectOnPlane(worldVelocity, Vector3.up);
+            _verticalVelocity = worldVelocity.y;
+            _lastGroundedTime = float.NegativeInfinity;
+            _isFloatingInWater = false;
+            ClearActiveSupport();
+
+            if (worldVelocity.sqrMagnitude > 0.0001f)
+            {
+                LogInfo(
+                    $"Applied inherited world velocity. playerIndex={_playerInput.playerIndex}, scene={_currentMacroScene}, velocity={worldVelocity}, horizontal={_inheritedHorizontalVelocity}, parent={transform.parent?.name ?? "None"}, position={transform.position}.");
+            }
         }
 
         public void EndScriptedMovement(object owner)
@@ -150,6 +170,7 @@ namespace Bitbox
             _verticalVelocity = 0f;
             _lastGroundedTime = Time.time;
             _isFloatingInWater = false;
+            _inheritedHorizontalVelocity = Vector3.zero;
             ClearActiveSupport();
             PublishGroundedIdleAnimation("scripted_movement_ended");
         }
@@ -194,6 +215,7 @@ namespace Bitbox
 
         private void OnMacroSceneLoaded(MacroSceneLoadedEvent @event)
         {
+            MacroSceneType previousMacroScene = _currentMacroScene;
             _currentMacroScene = @event.SceneType;
             _isPaused = false;
 
@@ -201,8 +223,15 @@ namespace Bitbox
             {
                 _verticalVelocity = 0f;
                 _isFloatingInWater = false;
+                _inheritedHorizontalVelocity = Vector3.zero;
                 ClearActiveSupport();
                 PublishGroundedIdleAnimation($"macro_scene_loaded:{@event.SceneType}");
+                return;
+            }
+
+            if (ShouldPreserveGameplayTransitionPose(previousMacroScene, @event.SceneType))
+            {
+                PreserveGameplayTransitionPose(previousMacroScene, @event.SceneType);
                 return;
             }
 
@@ -267,6 +296,7 @@ namespace Bitbox
             _verticalVelocity = 0f;
             _lastGroundedTime = Time.time;
             _isFloatingInWater = false;
+            _inheritedHorizontalVelocity = Vector3.zero;
             ClearActiveSupport();
             PublishGroundedIdleAnimation($"gameplay_spawn_snap:{sceneType}");
             LogInfo(
@@ -312,6 +342,7 @@ namespace Bitbox
             WaterFloatFrame waterFloatBeforeMove = ResolveWaterFloatFrame(gameplayData, rawGroundedBeforeMove, allowEnter: true);
             bool isFloatingBeforeMove = waterFloatBeforeMove.IsFloating;
             Vector3 supportDisplacement = isFloatingBeforeMove ? Vector3.zero : ResolveSupportDisplacement();
+            Vector3 inheritedHorizontalVelocity = ResolveInheritedHorizontalVelocity();
             if (isFloatingBeforeMove)
             {
                 ClearActiveSupport();
@@ -325,7 +356,7 @@ namespace Bitbox
                 waterFloatBeforeMove);
 
             float movementSpeed = gameplayData.WalkSpeed * (isFloatingBeforeMove ? gameplayData.WaterMoveSpeedMultiplier : 1f);
-            Vector3 velocity = moveDirection * movementSpeed;
+            Vector3 velocity = (moveDirection * movementSpeed) + inheritedHorizontalVelocity;
             velocity.y = _verticalVelocity;
             CollisionFlags collisionFlags = _characterController.Move(supportDisplacement + (velocity * Time.deltaTime));
             bool hasGroundSupportAfterMove = TryResolveGroundSupport(out Transform supportTransform);
@@ -479,9 +510,61 @@ namespace Bitbox
                 System.StringComparison.Ordinal);
         }
 
+        private bool ShouldPreserveGameplayTransitionPose(MacroSceneType previousScene, MacroSceneType nextScene)
+        {
+            return previousScene.IsGameplayScene()
+                && nextScene.IsGameplayScene()
+                && IsAttachedToPlayerVessel();
+        }
+
+        private bool IsAttachedToPlayerVessel()
+        {
+            Transform currentParent = transform.parent;
+            if (currentParent != null && currentParent.GetComponentInParent<PlayerVesselRoot>() != null)
+            {
+                return true;
+            }
+
+            return _playerInput != null
+                && BoatPassengerVolume.TryResolveForPlayer(_playerInput, out BoatPassengerVolume passengerVolume)
+                && passengerVolume != null
+                && passengerVolume.IsRiderTracked(_playerInput);
+        }
+
+        private void PreserveGameplayTransitionPose(MacroSceneType previousScene, MacroSceneType nextScene)
+        {
+            _verticalVelocity = 0f;
+            _lastGroundedTime = Time.time;
+            _isFloatingInWater = false;
+            _inheritedHorizontalVelocity = Vector3.zero;
+            ClearActiveSupport();
+            PublishGroundedIdleAnimation($"gameplay_pose_preserved:{previousScene}->{nextScene}");
+            Vector3 localPosition = transform.parent != null
+                ? transform.parent.InverseTransformPoint(transform.position)
+                : Vector3.zero;
+            LogInfo(
+                $"Preserved gameplay transition pose. playerIndex={_playerInput.playerIndex}, previousScene={previousScene}, scene={nextScene}, position={transform.position}, localPosition={localPosition}, rotation={transform.rotation.eulerAngles}, parent={transform.parent?.name ?? "None"}, actionMap={_playerInput.currentActionMap?.name ?? "None"}.");
+        }
+
+        private Vector3 ResolveInheritedHorizontalVelocity()
+        {
+            if (_inheritedHorizontalVelocity.sqrMagnitude <= Mathf.Epsilon)
+            {
+                return Vector3.zero;
+            }
+
+            Vector3 inheritedVelocity = _inheritedHorizontalVelocity;
+            float interpolationFactor = 1f - Mathf.Exp(-InheritedVelocityDampingPerSecond * Time.deltaTime);
+            _inheritedHorizontalVelocity = Vector3.Lerp(
+                _inheritedHorizontalVelocity,
+                Vector3.zero,
+                interpolationFactor);
+            return inheritedVelocity;
+        }
+
         private Vector3 ResolveSupportDisplacement()
         {
-            if (_activeSupportTransform == null || IsPlayerVesselSupport(_activeSupportTransform))
+            if (_activeSupportTransform == null)
             {
                 return Vector3.zero;
             }
@@ -492,7 +575,7 @@ namespace Bitbox
 
         private void UpdateActiveSupport(bool isGrounded, Transform supportTransform)
         {
-            if (!isGrounded || supportTransform == null || IsPlayerVesselSupport(supportTransform))
+            if (!isGrounded || supportTransform == null)
             {
                 ClearActiveSupport();
                 return;
@@ -506,12 +589,6 @@ namespace Bitbox
         {
             _activeSupportTransform = null;
             _activeSupportLocalPoint = Vector3.zero;
-        }
-
-        private static bool IsPlayerVesselSupport(Transform supportTransform)
-        {
-            return supportTransform != null
-                && supportTransform.GetComponentInParent<PlayerVesselRoot>() != null;
         }
 
         private bool TryResolveGroundSupport(out Transform supportTransform)
@@ -569,14 +646,23 @@ namespace Bitbox
 
         private void AssertCharacterControllerCollisionConfiguration()
         {
+            int defaultLayer = LayerMask.NameToLayer(DefaultLayerName);
             int terrainLayer = LayerMask.NameToLayer(TerrainLayerName);
+            Assert.IsTrue(defaultLayer >= 0, $"Expected a '{DefaultLayerName}' layer to exist.");
             Assert.IsTrue(terrainLayer >= 0, $"Expected a '{TerrainLayerName}' layer to exist.");
 
+            int defaultMask = 1 << defaultLayer;
             int terrainMask = 1 << terrainLayer;
             Assert.IsTrue(_characterController.detectCollisions, $"{nameof(CharacterController)} must have collision detection enabled.");
             Assert.IsTrue(
+                (_characterController.includeLayers.value & defaultMask) == defaultMask,
+                $"{nameof(CharacterController)} include layers must include '{DefaultLayerName}' so players remain grounded on default-layer boat deck colliders.");
+            Assert.IsTrue(
                 (_characterController.includeLayers.value & terrainMask) == terrainMask,
                 $"{nameof(CharacterController)} include layers must include '{TerrainLayerName}'.");
+            Assert.IsTrue(
+                (_characterController.excludeLayers.value & defaultMask) == 0,
+                $"{nameof(CharacterController)} exclude layers must not exclude '{DefaultLayerName}'.");
             Assert.IsTrue(
                 (_characterController.excludeLayers.value & terrainMask) == 0,
                 $"{nameof(CharacterController)} exclude layers must not exclude '{TerrainLayerName}'.");

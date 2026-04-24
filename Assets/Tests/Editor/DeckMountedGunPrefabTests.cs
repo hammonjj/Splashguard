@@ -1,11 +1,16 @@
 #if UNITY_EDITOR
 using System;
 using System.Reflection;
+using BitBox.Library;
+using BitBox.Library.Constants;
+using BitBox.Library.Eventing;
+using BitBox.Library.Eventing.GlobalEvents;
 using Bitbox;
 using NUnit.Framework;
 using NUnitAssert = NUnit.Framework.Assert;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace BitBox.Toymageddon.Tests.Editor
 {
@@ -137,6 +142,98 @@ namespace BitBox.Toymageddon.Tests.Editor
             }
         }
 
+        [Test]
+        public void BoatGunSceneTransitionReset_ReleasesControlAndPublishesExitEvent()
+        {
+            using TestMessageBusScope busScope = new();
+            var prefab = LoadRequiredPrefab(PlayerVesselPrefabPath);
+            var instance = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
+            PlayerInput playerInput = CreatePlayerInput(Strings.ThirdPersonControls, out InputActionAsset inputActions);
+            int exitedPlayerIndex = -1;
+
+            GlobalStaticData.GlobalMessageBus.Subscribe<PlayerExitedBoatGunEvent>(@event => exitedPlayerIndex = @event.PlayerIndex);
+
+            try
+            {
+                NUnitAssert.IsNotNull(instance, "Expected to instantiate PlayerVessel prefab.");
+                Transform gunTransform = FindChildByName(instance.transform, "GattlingCanon");
+                NUnitAssert.IsNotNull(gunTransform, "PlayerVessel should include a deck gun.");
+
+                var gunControl = gunTransform.GetComponent<DeckMountedGunControl>();
+                NUnitAssert.IsNotNull(gunControl, "Deck gun should own DeckMountedGunControl.");
+
+                InvokeCacheReferences(gunControl);
+                InvokePrivate(gunControl, "AssumeControl", playerInput);
+                DeckMountedGunControl.ReleaseAllForSceneTransition();
+
+                NUnitAssert.IsFalse(
+                    DeckMountedGunControl.TryGetActiveGun(playerInput.playerIndex, out _),
+                    "Scene transitions should clear boat-gun ownership before the next gameplay scene loads.");
+                NUnitAssert.IsNotNull(playerInput.currentActionMap);
+                NUnitAssert.AreEqual(
+                    Strings.ThirdPersonControls,
+                    playerInput.currentActionMap.name,
+                    "Scene transitions should return boat-gun players to the normal gameplay input map.");
+                BoatPassengerVolume passengerVolume = instance.GetComponentInChildren<BoatPassengerVolume>(includeInactive: true);
+                NUnitAssert.IsNotNull(passengerVolume, "PlayerVessel should include a BoatPassengerVolume for rider tracking.");
+                NUnitAssert.IsTrue(
+                    passengerVolume.IsRiderAttached(playerInput),
+                    "Scene-transition cleanup should restore released boat-gun players to tracked boat-rider state so they carry forward with it.");
+                NUnitAssert.AreEqual(
+                    playerInput.playerIndex,
+                    exitedPlayerIndex,
+                    "Scene-transition cleanup should publish the boat-gun exit event so cameras and HUD reset.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(playerInput.gameObject);
+                UnityEngine.Object.DestroyImmediate(inputActions);
+                UnityEngine.Object.DestroyImmediate(instance);
+            }
+        }
+
+        [Test]
+        public void BoatGunRelease_RestoresThirdPersonControlsAndReattachesToBoat()
+        {
+            var prefab = LoadRequiredPrefab(PlayerVesselPrefabPath);
+            var instance = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
+            PlayerInput playerInput = CreatePlayerInput(Strings.ThirdPersonControls, out InputActionAsset inputActions);
+
+            try
+            {
+                NUnitAssert.IsNotNull(instance, "Expected to instantiate PlayerVessel prefab.");
+                Transform gunTransform = FindChildByName(instance.transform, "GattlingCanon");
+                NUnitAssert.IsNotNull(gunTransform, "PlayerVessel should include a deck gun.");
+
+                var gunControl = gunTransform.GetComponent<DeckMountedGunControl>();
+                NUnitAssert.IsNotNull(gunControl, "Deck gun should own DeckMountedGunControl.");
+
+                InvokeCacheReferences(gunControl);
+                InvokePrivate(gunControl, "AssumeControl", playerInput);
+                InvokePrivate(gunControl, "ReleaseControl", false, "test_release");
+
+                NUnitAssert.IsFalse(
+                    DeckMountedGunControl.TryGetActiveGun(playerInput.playerIndex, out _),
+                    "Releasing the boat gun should clear the active station lookup for the player.");
+                NUnitAssert.IsNotNull(playerInput.currentActionMap);
+                NUnitAssert.AreEqual(
+                    Strings.ThirdPersonControls,
+                    playerInput.currentActionMap.name,
+                    "Releasing the boat gun should restore the normal third-person action map.");
+                BoatPassengerVolume passengerVolume = instance.GetComponentInChildren<BoatPassengerVolume>(includeInactive: true);
+                NUnitAssert.IsNotNull(passengerVolume, "PlayerVessel should include a BoatPassengerVolume for rider tracking.");
+                NUnitAssert.IsTrue(
+                    passengerVolume.IsRiderAttached(playerInput),
+                    "Releasing the boat gun should hand the player back to tracked boat-rider state so they stay with the vessel.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(playerInput.gameObject);
+                UnityEngine.Object.DestroyImmediate(inputActions);
+                UnityEngine.Object.DestroyImmediate(instance);
+            }
+        }
+
         private static GameObject LoadRequiredPrefab(string prefabPath)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
@@ -152,6 +249,56 @@ namespace BitBox.Toymageddon.Tests.Editor
 
             NUnitAssert.IsNotNull(cacheReferences, "Expected DeckMountedGunControl.CacheReferences to exist.");
             cacheReferences.Invoke(gunControl, Array.Empty<object>());
+        }
+
+        private static void InvokePrivate(object target, string methodName, params object[] args)
+        {
+            MethodInfo method = target.GetType().GetMethod(
+                methodName,
+                BindingFlags.Instance | BindingFlags.NonPublic);
+
+            NUnitAssert.IsNotNull(method, $"Expected method '{methodName}' on {target.GetType().Name}.");
+            method.Invoke(target, args);
+        }
+
+        private static PlayerInput CreatePlayerInput(string currentActionMap, out InputActionAsset inputActions)
+        {
+            var playerObject = new GameObject("TestPlayerInput");
+            var playerInput = playerObject.AddComponent<PlayerInput>();
+
+            inputActions = ScriptableObject.CreateInstance<InputActionAsset>();
+            inputActions.AddActionMap(Strings.ThirdPersonControls).AddAction(Strings.ActionAction);
+            InputActionMap boatGunnerMap = inputActions.AddActionMap(Strings.BoatGunner);
+            boatGunnerMap.AddAction(Strings.ActionAction);
+            boatGunnerMap.AddAction(Strings.AimAction, InputActionType.Value);
+            boatGunnerMap.AddAction(Strings.ZoomAction);
+            boatGunnerMap.AddAction(Strings.FireAction);
+
+            playerInput.actions = inputActions;
+            playerInput.defaultActionMap = currentActionMap;
+            playerInput.actions.Enable();
+            playerInput.SwitchCurrentActionMap(currentActionMap);
+            playerInput.ActivateInput();
+            return playerInput;
+        }
+
+        private sealed class TestMessageBusScope : IDisposable
+        {
+            private readonly GameObject _globalBusHost;
+            private readonly MessageBus _previousGlobalBus;
+
+            public TestMessageBusScope()
+            {
+                _previousGlobalBus = GlobalStaticData.GlobalMessageBus;
+                _globalBusHost = new GameObject("GlobalMessageBus");
+                GlobalStaticData.GlobalMessageBus = _globalBusHost.AddComponent<MessageBus>();
+            }
+
+            public void Dispose()
+            {
+                GlobalStaticData.GlobalMessageBus = _previousGlobalBus;
+                UnityEngine.Object.DestroyImmediate(_globalBusHost);
+            }
         }
 
         private static Transform FindChildByName(Transform root, string childName)

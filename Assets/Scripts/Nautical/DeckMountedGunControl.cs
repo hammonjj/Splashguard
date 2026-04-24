@@ -38,6 +38,7 @@ namespace Bitbox
         private readonly List<int> _retakeBlocksToRemove = new();
 
         private Transform _boatTransform;
+        private BoatPassengerVolume _boatPassengerVolume;
         private MessageBus _localMessageBus;
         private PlayerInput _controllingPlayerInput;
         private InputAction _aimAction;
@@ -59,6 +60,28 @@ namespace Bitbox
         public static bool TryGetActiveGun(int playerIndex, out DeckMountedGunControl gun)
         {
             return ActiveGunsByPlayerIndex.TryGetValue(playerIndex, out gun) && gun != null;
+        }
+
+        public static void ReleaseAllForSceneTransition()
+        {
+            if (ActiveGunsByPlayerIndex.Count == 0)
+            {
+                return;
+            }
+
+            DeckMountedGunControl[] activeGuns = new DeckMountedGunControl[ActiveGunsByPlayerIndex.Count];
+            ActiveGunsByPlayerIndex.Values.CopyTo(activeGuns, 0);
+
+            for (int i = 0; i < activeGuns.Length; i++)
+            {
+                DeckMountedGunControl activeGun = activeGuns[i];
+                if (activeGun == null)
+                {
+                    continue;
+                }
+
+                activeGun.ReleaseForSceneTransition();
+            }
         }
 
         protected override void OnEnabled()
@@ -155,6 +178,7 @@ namespace Bitbox
         {
             ConfigureMountedRigidbody();
             _boatTransform ??= ResolveBoatTransform();
+            _boatPassengerVolume ??= ResolveBoatPassengerVolume();
             _localMessageBus ??= GetComponent<MessageBus>();
             if (_localMessageBus == null)
             {
@@ -282,6 +306,7 @@ namespace Bitbox
             Assert.IsNotNull(_zoomAction, $"{nameof(DeckMountedGunControl)} requires the '{Strings.ZoomAction}' action.");
             Assert.IsNotNull(_fireAction, $"{nameof(DeckMountedGunControl)} requires the '{Strings.FireAction}' action.");
 
+            _boatPassengerVolume?.TrySuspendRider(playerInput);
             ActivateInputMap(playerInput, Strings.BoatGunner);
             _controllingPlayerInput = playerInput;
             _suppressExitUntilActionReleased = true;
@@ -327,11 +352,17 @@ namespace Bitbox
             _lastFireHeld = false;
             RestoreControlledPlayerColliders();
             ActivateInputMap(releasedPlayerInput, Strings.ThirdPersonControls);
+            _boatPassengerVolume?.ResumeRider(releasedPlayerInput);
 
             if (publishEvent)
             {
                 _globalMessageBus.Publish(new PlayerExitedBoatGunEvent(playerIndex));
             }
+        }
+
+        private void ReleaseForSceneTransition()
+        {
+            ReleaseControl(reason: "scene_transition");
         }
 
         private void ReadControlInputs()
@@ -436,6 +467,16 @@ namespace Bitbox
             {
                 cameraAnchorRoot.SetParent(_pitchPivot, true);
             }
+        }
+
+        private BoatPassengerVolume ResolveBoatPassengerVolume()
+        {
+            PlayerVesselRoot vesselRoot = _boatTransform != null
+                ? _boatTransform.GetComponent<PlayerVesselRoot>()
+                : GetComponentInParent<PlayerVesselRoot>();
+            return vesselRoot != null
+                ? vesselRoot.GetComponentInChildren<BoatPassengerVolume>(includeInactive: true)
+                : null;
         }
 
         private void AttachPhysicalCollidersToPitchPivot()

@@ -3,7 +3,10 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using BitBox.Library;
 using BitBox.Library.Constants;
+using BitBox.Library.Eventing;
+using BitBox.Library.Eventing.GlobalEvents;
 using Bitbox;
 using Bitbox.Splashguard.Nautical;
 using NUnit.Framework;
@@ -92,7 +95,53 @@ namespace BitBox.Toymageddon.Tests.Editor
                 NUnitAssert.IsFalse(CargoBayControls.TryGetActiveCargoBay(playerInput.playerIndex, out _));
                 NUnitAssert.IsNotNull(playerInput.currentActionMap);
                 NUnitAssert.AreEqual(Strings.ThirdPersonControls, playerInput.currentActionMap.name);
+                BoatPassengerVolume passengerVolume = root.GetComponentInChildren<BoatPassengerVolume>(includeInactive: true);
+                NUnitAssert.IsNotNull(passengerVolume, "Configured cargo controls root should include a BoatPassengerVolume.");
+                NUnitAssert.IsTrue(
+                    passengerVolume.IsRiderAttached(playerInput),
+                    "Releasing cargo controls should return the player to tracked boat-rider state so they stay with the vessel.");
                 NUnitAssert.AreEqual(0f, NormalizeAngle(portDoor.transform.localEulerAngles.z), 0.1f);
+            }
+            finally
+            {
+                InvokePrivate(controls, "ReleaseControl", false, "test_cleanup");
+                UnityEngine.Object.DestroyImmediate(playerInput.gameObject);
+                UnityEngine.Object.DestroyImmediate(inputActions);
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void CargoBaySceneTransitionReset_ReleasesControlAndPublishesExitEvent()
+        {
+            using TestMessageBusScope busScope = new();
+            CargoBayControls controls = CreateConfiguredCargoControls(out GameObject root, out _, out _);
+            PlayerInput playerInput = CreatePlayerInput(Strings.ThirdPersonControls, out InputActionAsset inputActions);
+            int exitedPlayerIndex = -1;
+
+            GlobalStaticData.GlobalMessageBus.Subscribe<PlayerExitedCraneEvent>(@event => exitedPlayerIndex = @event.PlayerIndex);
+
+            try
+            {
+                InvokePrivate(controls, "AssumeControl", playerInput);
+                CargoBayControls.ReleaseAllForSceneTransition();
+
+                NUnitAssert.IsFalse(controls.HasControllingPlayer);
+                NUnitAssert.IsFalse(CargoBayControls.TryGetActiveCargoBay(playerInput.playerIndex, out _));
+                NUnitAssert.IsNotNull(playerInput.currentActionMap);
+                NUnitAssert.AreEqual(
+                    Strings.ThirdPersonControls,
+                    playerInput.currentActionMap.name,
+                    "Scene transitions should return crane players to the normal gameplay input map.");
+                BoatPassengerVolume passengerVolume = root.GetComponentInChildren<BoatPassengerVolume>(includeInactive: true);
+                NUnitAssert.IsNotNull(passengerVolume, "Configured cargo controls root should include a BoatPassengerVolume.");
+                NUnitAssert.IsTrue(
+                    passengerVolume.IsRiderAttached(playerInput),
+                    "Scene-transition cleanup should restore released crane players to tracked boat-rider state so they carry forward with the vessel.");
+                NUnitAssert.AreEqual(
+                    playerInput.playerIndex,
+                    exitedPlayerIndex,
+                    "Scene-transition cleanup should publish the crane exit event so cameras and HUD reset.");
             }
             finally
             {
@@ -236,7 +285,15 @@ namespace BitBox.Toymageddon.Tests.Editor
         {
             root = new GameObject("CargoBayControlsTestRoot");
             root.SetActive(false);
+            root.AddComponent<PlayerVesselRoot>();
             root.AddComponent<Rigidbody>().isKinematic = true;
+
+            GameObject passengerVolumeObject = new("BoatPassengerVolume");
+            passengerVolumeObject.transform.SetParent(root.transform, false);
+            BoxCollider passengerTrigger = passengerVolumeObject.AddComponent<BoxCollider>();
+            passengerTrigger.isTrigger = true;
+            passengerTrigger.size = new Vector3(4f, 4f, 4f);
+            BoatPassengerVolume passengerVolume = passengerVolumeObject.AddComponent<BoatPassengerVolume>();
 
             GameObject triggerObject = new("InteractionTrigger");
             triggerObject.transform.SetParent(root.transform);
@@ -254,6 +311,7 @@ namespace BitBox.Toymageddon.Tests.Editor
             SetPrivateField(controls, "_starboardDoor", starboardDoor);
             SetPrivateField(controls, "_interactionTrigger", trigger);
             root.SetActive(true);
+            InvokePrivate(passengerVolume, "CacheReferences");
             InvokePrivate(controls, "CacheReferences");
             InvokePrivate(controls, "CacheClosedDoorRotations");
             return controls;
@@ -334,6 +392,25 @@ namespace BitBox.Toymageddon.Tests.Editor
                 BindingFlags.Instance | BindingFlags.NonPublic);
             NUnitAssert.IsNotNull(field, $"Expected field '{fieldName}' on {target.GetType().Name}.");
             field.SetValue(target, value);
+        }
+
+        private sealed class TestMessageBusScope : IDisposable
+        {
+            private readonly GameObject _globalBusHost;
+            private readonly MessageBus _previousGlobalBus;
+
+            public TestMessageBusScope()
+            {
+                _previousGlobalBus = GlobalStaticData.GlobalMessageBus;
+                _globalBusHost = new GameObject("GlobalMessageBus");
+                GlobalStaticData.GlobalMessageBus = _globalBusHost.AddComponent<MessageBus>();
+            }
+
+            public void Dispose()
+            {
+                GlobalStaticData.GlobalMessageBus = _previousGlobalBus;
+                UnityEngine.Object.DestroyImmediate(_globalBusHost);
+            }
         }
     }
 }
