@@ -95,6 +95,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "OpenDebugPanel",
+                    "type": "Button",
+                    "id": "cf073d47-3432-4041-bf6e-71055464b1c0",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -386,6 +395,17 @@
                 },
                 {
                     "name": "",
+                    "id": "4de5d750-9b97-499d-b2e6-397181bcac7f",
+                    "path": "<Keyboard>/backquote",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "OpenDebugPanel",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "c52c8e0b-8179-41d3-b8a1-d149033bbe86",
                     "path": "<Mouse>/position",
                     "interactions": "",
@@ -550,6 +570,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "OpenDebugPanel",
+                    "type": "Button",
+                    "id": "e5d22819-95f0-4af2-88ed-ba246e077ba1",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Action",
                     "type": "Button",
                     "id": "21a63130-cb45-499d-a24a-a79e65bb5873",
@@ -681,6 +710,17 @@
                 },
                 {
                     "name": "",
+                    "id": "5cc1c9ce-517f-4066-89ab-529f7267312b",
+                    "path": "<Keyboard>/backquote",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "OpenDebugPanel",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "4edf73c3-d687-4e80-b8a5-19d2dc2278e3",
                     "path": "<Keyboard>/t",
                     "interactions": "",
@@ -751,6 +791,15 @@
                     "name": "Pause",
                     "type": "Button",
                     "id": "1b4a6539-2280-47cc-92de-6341e0eb9079",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "OpenDebugPanel",
+                    "type": "Button",
+                    "id": "11e61826-d19e-4ee4-9eeb-7704b2d72e74",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -892,6 +941,17 @@
                     "processors": "",
                     "groups": "Gamepad",
                     "action": "Pause",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "1bf8a6c2-62a9-41c9-82a5-04c141577983",
+                    "path": "<Keyboard>/backquote",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "OpenDebugPanel",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -1039,6 +1099,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "OpenDebugPanel",
+                    "type": "Button",
+                    "id": "1dd67b13-83eb-40a6-b0db-a18d9607f8c5",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Zoom",
                     "type": "Button",
                     "id": "1211aa1c-71ee-4f3f-bcff-0b2f26cde5be",
@@ -1121,6 +1190,17 @@
                     "processors": "",
                     "groups": "Gamepad",
                     "action": "Pause",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "f1390cdc-7b4c-4142-ab6f-3ca043d81eb9",
+                    "path": "<Keyboard>/backquote",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "OpenDebugPanel",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -1214,6 +1294,15 @@
                     "name": "Pause",
                     "type": "Button",
                     "id": "1c97abf3-be94-4671-978a-cb7cb2552865",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "OpenDebugPanel",
+                    "type": "Button",
+                    "id": "e68ceb4b-b3ad-4074-8b40-251565e6f248",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -1438,6 +1527,17 @@
                     "processors": "",
                     "groups": "Gamepad",
                     "action": "Pause",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "ef7e478c-a0fa-4d55-9a67-3592d164dc05",
+                    "path": "<Keyboard>/backquote",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "OpenDebugPanel",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

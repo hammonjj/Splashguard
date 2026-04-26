@@ -6,6 +6,15 @@
       "source": "embedded",
       "dependencies": {}
     },
+    "com.consolepilot.debugconsole": {
+      "version": "https://github.com/hammonjj/ConsolePilot.git#main",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.inputsystem": "1.7.0"
+      },
+      "hash": "3e87ff8d74a6c207238f438c1bfab64bcc9486b7"
+    },
     "com.singularitygroup.hotreload": {
       "version": "file:com.singularitygroup.hotreload",
       "depth": 0,

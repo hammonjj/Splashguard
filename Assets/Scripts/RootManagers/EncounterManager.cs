@@ -24,6 +24,8 @@ namespace Bitbox
         [SerializeField, Required, InlineEditor] private EncounterDefinition _encounterDefinition;
         [SerializeField] private GameObject[] _spawnZones;
         [SerializeField, Min(0)] private int _desiredEnemyCount = 3;
+        [SerializeField, Min(1)] private int _waveCount = 1;
+        [SerializeField, Min(0f)] private float _waveSpawnDelaySeconds = 1f;
         [SerializeField, Min(1f)] private float _spawnSearchRadius = 60f;
         [SerializeField, Min(0f)] private float _minimumDistanceFromPlayerLoad = 24f;
         [SerializeField, Min(0f)] private float _shorelinePerimeterRadius = 10f;
@@ -33,6 +35,9 @@ namespace Bitbox
         private readonly HashSet<GameObject> _trackedEnemyRoots = new();
         private System.Random _random;
         private int _terrainLayerMask;
+        private Coroutine _queuedWaveSpawn;
+        private int _currentWaveIndex;
+        private bool _isSpawningWave;
         private bool _encounterComplete;
 
         public bool IsEncounterComplete => _encounterComplete;
@@ -52,6 +57,7 @@ namespace Bitbox
         protected override void OnDisabled()
         {
             _globalMessageBus?.Unsubscribe<EnemyDeathEvent>(OnEnemyDeath);
+            StopQueuedWaveSpawn();
             _trackedEnemyRoots.Clear();
         }
 
@@ -74,11 +80,22 @@ namespace Bitbox
             context.ReportProgress(0f, "Planning encounter...");
             yield return null;
 
+            yield return SpawnWave(context, 1, reportProgress: true);
+        }
+
+        private IEnumerator SpawnWave(GameplaySceneStartupContext context, int waveIndex, bool reportProgress)
+        {
+            int waveCount = ResolveWaveCount();
+            _currentWaveIndex = Mathf.Clamp(waveIndex, 1, waveCount);
+            _isSpawningWave = true;
+            _trackedEnemyRoots.Clear();
+
             if (_desiredEnemyCount <= 0)
             {
-                LogWarning("Encounter startup skipped because desired enemy count is zero.");
+                LogWarning("Encounter wave skipped because desired enemy count is zero.");
                 MarkEncounterComplete("desired_enemy_count_zero");
-                context.ReportProgress(1f, "Encounter ready.");
+                ReportStartupProgress(context, reportProgress, 1f, "Encounter ready.");
+                _isSpawningWave = false;
                 yield break;
             }
 
@@ -86,9 +103,10 @@ namespace Bitbox
             if (_encounterDefinition == null || !_encounterDefinition.IsValidDefinition(out validationError))
             {
                 LogWarning(
-                    $"Encounter startup completed without spawning enemies because the definition is invalid. reason={validationError}");
+                    $"Encounter wave completed without spawning enemies because the definition is invalid. reason={validationError}");
                 MarkEncounterComplete("invalid_definition");
-                context.ReportProgress(1f, "Encounter ready.");
+                ReportStartupProgress(context, reportProgress, 1f, "Encounter ready.");
+                _isSpawningWave = false;
                 yield break;
             }
 
@@ -107,15 +125,17 @@ namespace Bitbox
                     if (!TrySpawnEnemyForZone(spawnZone, exclusionCenter, out GameObject spawnedEnemy))
                     {
                         LogWarning(
-                            $"Encounter startup failed to spawn an enemy in zone '{spawnZone?.name ?? "null"}' after {_maxSpawnAttempts} attempts.");
+                            $"Encounter wave {_currentWaveIndex}/{waveCount} failed to spawn an enemy in zone '{spawnZone?.name ?? "null"}' after {_maxSpawnAttempts} attempts.");
                         continue;
                     }
 
                     TrackSpawnedEnemy(spawnedEnemy);
                     spawnedEnemyCount++;
-                    context.ReportProgress(
+                    ReportStartupProgress(
+                        context,
+                        reportProgress,
                         (float)spawnedEnemyCount / _desiredEnemyCount,
-                        $"Spawning enemies {spawnedEnemyCount}/{_desiredEnemyCount}...");
+                        $"Spawning wave {_currentWaveIndex}/{waveCount} enemies {spawnedEnemyCount}/{_desiredEnemyCount}...");
                     yield return null;
                 }
             }
@@ -130,29 +150,44 @@ namespace Bitbox
 
                     TrackSpawnedEnemy(spawnedEnemy);
                     spawnedEnemyCount++;
-                    context.ReportProgress(
+                    ReportStartupProgress(
+                        context,
+                        reportProgress,
                         (float)spawnedEnemyCount / _desiredEnemyCount,
-                        $"Spawning enemies {spawnedEnemyCount}/{_desiredEnemyCount}...");
+                        $"Spawning wave {_currentWaveIndex}/{waveCount} enemies {spawnedEnemyCount}/{_desiredEnemyCount}...");
                     yield return null;
                 }
             }
 
             if (spawnedEnemyCount == 0)
             {
-                LogWarning("Encounter startup found no valid enemy spawn points. Marking encounter complete to avoid a soft lock.");
+                LogWarning($"Encounter wave {_currentWaveIndex}/{waveCount} found no valid enemy spawn points. Marking encounter complete to avoid a soft lock.");
                 MarkEncounterComplete("zero_spawned_enemies");
-                context.ReportProgress(1f, "Encounter ready.");
+                ReportStartupProgress(context, reportProgress, 1f, "Encounter ready.");
+                _isSpawningWave = false;
                 yield break;
             }
 
             if (spawnedEnemyCount < _desiredEnemyCount)
             {
                 LogWarning(
-                    $"Encounter startup spawned {spawnedEnemyCount}/{_desiredEnemyCount} enemies after {_maxSpawnAttempts} attempts.");
+                    $"Encounter wave {_currentWaveIndex}/{waveCount} spawned {spawnedEnemyCount}/{_desiredEnemyCount} enemies after {_maxSpawnAttempts} attempts.");
             }
 
             _encounterComplete = false;
-            context.ReportProgress(1f, "Encounter ready.");
+            LogInfo(
+                $"Encounter wave spawned. wave={_currentWaveIndex}/{waveCount}, spawnedEnemies={spawnedEnemyCount}, trackedEnemies={_trackedEnemyRoots.Count}.");
+            ReportStartupProgress(
+                context,
+                reportProgress,
+                1f,
+                _currentWaveIndex < waveCount ? $"Wave {_currentWaveIndex} ready." : "Encounter ready.");
+            _isSpawningWave = false;
+
+            if (_trackedEnemyRoots.Count == 0)
+            {
+                HandleWaveCleared();
+            }
         }
 
         private void OnEnemyDeath(EnemyDeathEvent @event)
@@ -164,8 +199,62 @@ namespace Bitbox
 
             if (_trackedEnemyRoots.Count == 0)
             {
-                MarkEncounterComplete("all_tracked_enemies_defeated");
+                HandleWaveCleared();
             }
+        }
+
+        private void HandleWaveCleared()
+        {
+            if (_isSpawningWave)
+            {
+                return;
+            }
+
+            int waveCount = ResolveWaveCount();
+            if (_currentWaveIndex < waveCount)
+            {
+                QueueNextWave(_currentWaveIndex + 1, waveCount);
+                return;
+            }
+
+            MarkEncounterComplete("all_waves_defeated");
+        }
+
+        private void QueueNextWave(int nextWaveIndex, int waveCount)
+        {
+            if (_queuedWaveSpawn != null)
+            {
+                return;
+            }
+
+            LogInfo(
+                $"Encounter wave cleared. wave={_currentWaveIndex}/{waveCount}, nextWave={nextWaveIndex}, spawnDelay={_waveSpawnDelaySeconds:0.##}.");
+            _queuedWaveSpawn = StartCoroutine(SpawnQueuedWave(nextWaveIndex));
+        }
+
+        private IEnumerator SpawnQueuedWave(int waveIndex)
+        {
+            if (_waveSpawnDelaySeconds > 0f)
+            {
+                yield return new WaitForSeconds(_waveSpawnDelaySeconds);
+            }
+
+            _queuedWaveSpawn = null;
+            yield return SpawnWave(default, waveIndex, reportProgress: false);
+        }
+
+        private static void ReportStartupProgress(
+            GameplaySceneStartupContext context,
+            bool shouldReport,
+            float progress,
+            string progressText)
+        {
+            if (!shouldReport)
+            {
+                return;
+            }
+
+            context.ReportProgress(progress, progressText);
         }
 
         private void TrackSpawnedEnemy(GameObject enemyRoot)
@@ -281,8 +370,27 @@ namespace Bitbox
 
         private void ResetEncounterState()
         {
+            StopQueuedWaveSpawn();
             _trackedEnemyRoots.Clear();
+            _currentWaveIndex = 0;
+            _isSpawningWave = false;
             _encounterComplete = false;
+        }
+
+        private void StopQueuedWaveSpawn()
+        {
+            if (_queuedWaveSpawn == null)
+            {
+                return;
+            }
+
+            StopCoroutine(_queuedWaveSpawn);
+            _queuedWaveSpawn = null;
+        }
+
+        private int ResolveWaveCount()
+        {
+            return Mathf.Max(1, _waveCount);
         }
 
         private void MarkEncounterComplete(string reason)

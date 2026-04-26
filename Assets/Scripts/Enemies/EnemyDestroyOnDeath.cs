@@ -88,6 +88,8 @@ namespace Bitbox.Splashguard.Enemies
 
         private static void ConfigureFireBurst(ParticleSystem particleSystem)
         {
+            PrepareParticleSystemForConfiguration(particleSystem);
+
             ParticleSystem.MainModule main = particleSystem.main;
             main.duration = 0.35f;
             main.loop = false;
@@ -121,6 +123,8 @@ namespace Bitbox.Splashguard.Enemies
 
         private static void ConfigureSmokeBurst(ParticleSystem particleSystem)
         {
+            PrepareParticleSystemForConfiguration(particleSystem);
+
             ParticleSystem.MainModule main = particleSystem.main;
             main.duration = 0.5f;
             main.loop = false;
@@ -157,6 +161,11 @@ namespace Bitbox.Splashguard.Enemies
                     new GradientAlphaKey(0f, 1f),
                 });
             colorOverLifetime.color = gradient;
+        }
+
+        private static void PrepareParticleSystemForConfiguration(ParticleSystem particleSystem)
+        {
+            particleSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         }
 
         private void DisableRuntimeComponents()

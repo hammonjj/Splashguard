@@ -49,6 +49,8 @@ MonoBehaviour:
   _encounterDefinition: {fileID: 11400000, guid: 6900878bdc1d45629dcb6d734b94e135, type: 2}
   _spawnZones: []
   _desiredEnemyCount: 3
+  _waveCount: 1
+  _waveSpawnDelaySeconds: 1
   _spawnSearchRadius: 60
   _minimumDistanceFromPlayerLoad: 24
   _shorelinePerimeterRadius: 10

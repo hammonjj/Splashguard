@@ -1,4 +1,5 @@
 using BitBox.Library;
+using BitBox.Library.Eventing.DebugEvents;
 using BitBox.Library.Eventing.WeaponEvents;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -26,11 +27,13 @@ namespace Bitbox.Splashguard.Enemies
             CacheReferences();
             ResetHealth();
             _globalMessageBus?.Subscribe<ProjectileImpactEvent>(OnProjectileImpact);
+            _globalMessageBus?.Subscribe<KillAllEnemiesEvent>(OnKillAllEnemies);
         }
 
         protected override void OnDisabled()
         {
             _globalMessageBus?.Unsubscribe<ProjectileImpactEvent>(OnProjectileImpact);
+            _globalMessageBus?.Unsubscribe<KillAllEnemiesEvent>(OnKillAllEnemies);
         }
 
         public void ResetHealth()
@@ -93,6 +96,17 @@ namespace Bitbox.Splashguard.Enemies
         private void OnProjectileImpact(ProjectileImpactEvent impact)
         {
             TryApplyProjectileImpact(impact);
+        }
+
+        private void OnKillAllEnemies(KillAllEnemiesEvent @event)
+        {
+            if (_isDead)
+            {
+                return;
+            }
+
+            float damage = _currentHealth > 0f ? _currentHealth : ResolveMaxHealth();
+            ApplyDamage(damage, -1, null, "kill_all_enemies");
         }
 
         private void CacheReferences()

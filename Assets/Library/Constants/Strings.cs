@@ -12,6 +12,7 @@ namespace BitBox.Library.Constants
     public const string MoveAction = "Move";
     public const string RotateCameraAction = "RotateCamera";
     public const string PauseAction = "Pause";
+    public const string OpenDebugPanelAction = "OpenDebugPanel";
     public const string ActionAction = "Action";
     public const string JumpAction = "Jump";
     public const string FireAction = "Fire";

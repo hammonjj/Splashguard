@@ -1629,6 +1629,14 @@ PrefabInstance:
       value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 4458032163189457909, guid: c496a8b5bc2d44459934cd5ea5b7afb2, type: 3}
+      propertyPath: _waveCount
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 4458032163189457909, guid: c496a8b5bc2d44459934cd5ea5b7afb2, type: 3}
+      propertyPath: _waveSpawnDelaySeconds
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4458032163189457909, guid: c496a8b5bc2d44459934cd5ea5b7afb2, type: 3}
       propertyPath: _spawnZones.Array.size
       value: 4
       objectReference: {fileID: 0}
